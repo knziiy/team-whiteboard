@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Group, Rect, Text, Circle } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { StickyProps } from '@whiteboard/shared';
@@ -21,21 +21,25 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
   const w = props.width ?? 160;
   const h = props.height ?? 120;
 
+  // Live resize preview (local only — onChange is called only on drag end)
+  const [preview, setPreview] = useState<{ w: number; h: number } | null>(null);
+  const displayW = preview?.w ?? w;
+  const displayH = preview?.h ?? h;
+
   const stopBubble = (e: KonvaEventObject<MouseEvent>) => { e.cancelBubble = true; };
 
-  // Corner handles: [dx, dy] offsets from (props.x, props.y)
+  // Corner handles use original w/h to avoid Konva drag position conflicts
   const handles = [
-    { id: 'br', cx: w, cy: h },   // bottom-right
-    { id: 'bl', cx: 0, cy: h },   // bottom-left
-    { id: 'tr', cx: w, cy: 0 },   // top-right
-    { id: 'tl', cx: 0, cy: 0 },   // top-left
+    { id: 'br', cx: w, cy: h },
+    { id: 'bl', cx: 0, cy: h },
+    { id: 'tr', cx: w, cy: 0 },
+    { id: 'tl', cx: 0, cy: 0 },
   ] as const;
 
-  const handleDragEnd = (handleId: string, dx: number, dy: number) => {
+  const computeResize = (handleId: string, dx: number, dy: number) => {
     let { x, y } = props;
     let newW = w;
     let newH = h;
-
     if (handleId === 'br') {
       newW = Math.max(MIN_W, w + dx);
       newH = Math.max(MIN_H, h + dy);
@@ -57,8 +61,7 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
       newW = Math.max(MIN_W, w - dw);
       newH = Math.max(MIN_H, h - dh);
     }
-
-    onChange({ ...props, x, y, width: newW, height: newH });
+    return { x, y, newW, newH };
   };
 
   return (
@@ -74,8 +77,8 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
       }}
     >
       <Rect
-        width={w}
-        height={h}
+        width={displayW}
+        height={displayH}
         fill={props.fill ?? '#ffffff'}
         shadowBlur={isSelected ? 0 : 3}
         shadowColor="rgba(0,0,0,0.15)"
@@ -86,8 +89,8 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
       {!isEditing && (
         <Text
           text={props.text || (isSelected ? 'ダブルクリックで編集' : '')}
-          width={w}
-          height={h}
+          width={displayW}
+          height={displayH}
           padding={8}
           fontSize={props.fontSize ?? 14}
           fill={props.text ? (props.textColor ?? '#1a1a1a') : '#9ca3af'}
@@ -98,7 +101,6 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
 
       {/* Resize handles — only when selected and not editing */}
       {isSelected && !isEditing && handles.map(({ id, cx, cy }) => {
-        // Starting position for drag tracking
         let startX = 0;
         let startY = 0;
 
@@ -119,15 +121,20 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
             }}
             onDragMove={(e) => {
               e.cancelBubble = true;
+              const dx = e.target.x() - startX;
+              const dy = e.target.y() - startY;
+              const { newW, newH } = computeResize(id, dx, dy);
+              setPreview({ w: newW, h: newH });
             }}
             onDragEnd={(e) => {
               e.cancelBubble = true;
               const dx = e.target.x() - startX;
               const dy = e.target.y() - startY;
-              // Reset handle position (shape drives position)
               e.target.x(cx);
               e.target.y(cy);
-              handleDragEnd(id, dx, dy);
+              setPreview(null);
+              const { x, y, newW, newH } = computeResize(id, dx, dy);
+              onChange({ ...props, x, y, width: newW, height: newH });
             }}
           />
         );
