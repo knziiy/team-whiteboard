@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Group, Rect, Text, Circle } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { StickyProps } from '@whiteboard/shared';
@@ -23,6 +23,8 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
 
   // Live resize preview (local only — onChange is called only on drag end)
   const [preview, setPreview] = useState<{ w: number; h: number } | null>(null);
+  // Persist drag start position across re-renders (let variables reset on each render)
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
   const displayW = preview?.w ?? w;
   const displayH = preview?.h ?? h;
 
@@ -100,45 +102,42 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
       )}
 
       {/* Resize handles — only when selected and not editing */}
-      {isSelected && !isEditing && handles.map(({ id, cx, cy }) => {
-        let startX = 0;
-        let startY = 0;
-
-        return (
-          <Circle
-            key={id}
-            x={cx}
-            y={cy}
-            radius={HANDLE_R}
-            fill="white"
-            stroke="#3B82F6"
-            strokeWidth={2}
-            draggable
-            onMouseDown={(e) => {
-              e.cancelBubble = true;
-              startX = e.target.x();
-              startY = e.target.y();
-            }}
-            onDragMove={(e) => {
-              e.cancelBubble = true;
-              const dx = e.target.x() - startX;
-              const dy = e.target.y() - startY;
-              const { newW, newH } = computeResize(id, dx, dy);
-              setPreview({ w: newW, h: newH });
-            }}
-            onDragEnd={(e) => {
-              e.cancelBubble = true;
-              const dx = e.target.x() - startX;
-              const dy = e.target.y() - startY;
-              e.target.x(cx);
-              e.target.y(cy);
-              setPreview(null);
-              const { x, y, newW, newH } = computeResize(id, dx, dy);
-              onChange({ ...props, x, y, width: newW, height: newH });
-            }}
-          />
-        );
-      })}
+      {isSelected && !isEditing && handles.map(({ id, cx, cy }) => (
+        <Circle
+          key={id}
+          x={cx}
+          y={cy}
+          radius={HANDLE_R}
+          fill="white"
+          stroke="#3B82F6"
+          strokeWidth={2}
+          draggable
+          onMouseDown={(e) => {
+            e.cancelBubble = true;
+            dragStart.current = { x: e.target.x(), y: e.target.y() };
+          }}
+          onDragMove={(e) => {
+            e.cancelBubble = true;
+            if (!dragStart.current) return;
+            const dx = e.target.x() - dragStart.current.x;
+            const dy = e.target.y() - dragStart.current.y;
+            const { newW, newH } = computeResize(id, dx, dy);
+            setPreview({ w: newW, h: newH });
+          }}
+          onDragEnd={(e) => {
+            e.cancelBubble = true;
+            if (!dragStart.current) return;
+            const dx = e.target.x() - dragStart.current.x;
+            const dy = e.target.y() - dragStart.current.y;
+            e.target.x(cx);
+            e.target.y(cy);
+            dragStart.current = null;
+            setPreview(null);
+            const { x, y, newW, newH } = computeResize(id, dx, dy);
+            onChange({ ...props, x, y, width: newW, height: newH });
+          }}
+        />
+      ))}
     </Group>
   );
 }
