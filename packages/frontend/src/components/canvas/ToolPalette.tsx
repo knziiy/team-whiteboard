@@ -16,7 +16,11 @@ const COLORS = [
   '#ffffff', '#9E9E9E', '#212121',
 ];
 
-export default function ToolPalette() {
+interface Props {
+  onApplyColor?: (color: string) => void;
+}
+
+export default function ToolPalette({ onApplyColor }: Props) {
   const activeTool = useBoardStore((s) => s.activeTool);
   const activeColor = useBoardStore((s) => s.activeColor);
   const setActiveTool = useBoardStore((s) => s.setActiveTool);
@@ -44,7 +48,10 @@ export default function ToolPalette() {
           {COLORS.map((color) => (
             <button
               key={color}
-              onClick={() => setActiveColor(color)}
+              onClick={() => {
+                setActiveColor(color);
+                onApplyColor?.(color);
+              }}
               title={color}
               className={`w-4 h-4 rounded-full border-2 transition-transform ${
                 activeColor === color ? 'border-blue-600 scale-125' : 'border-gray-200'
