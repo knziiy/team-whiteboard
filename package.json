@@ -13,6 +13,9 @@
     "dev:frontend": "npm run dev --workspace=packages/frontend",
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=packages/backend && npm run build --workspace=packages/frontend",
     "build:functions": "npm run build --workspace=packages/functions",
-    "migrate": "npm run migrate --workspace=packages/backend"
+    "migrate": "npm run migrate --workspace=packages/backend",
+    "dev:dynamo": "docker compose -f docker/docker-compose.serverless.yml up -d",
+    "dev:tables": "npx tsx scripts/create-tables-local.ts",
+    "dev:serverless": "npm run dev:dynamo && sleep 2 && npm run dev:tables"
   }
 }
