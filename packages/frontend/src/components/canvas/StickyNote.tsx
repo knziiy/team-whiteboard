@@ -14,7 +14,7 @@ interface Props {
 }
 
 const MIN_W = 80;
-const MIN_H = 60;
+const MIN_H = 36;
 const HANDLE_R = 6;
 
 export default function StickyNote({ props, isSelected, isEditing, onSelect, onDblClick, onChange }: Props) {
@@ -90,7 +90,7 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
           height={h}
           padding={8}
           fontSize={props.fontSize ?? 14}
-          fill={props.text ? '#1a1a1a' : '#9ca3af'}
+          fill={props.text ? (props.textColor ?? '#1a1a1a') : '#9ca3af'}
           wrap="word"
           listening={false}
         />

@@ -13,6 +13,7 @@ export interface StickyProps extends BaseElementProps {
   width: number;
   height: number;
   fontSize?: number;
+  textColor?: string;
 }
 
 export interface RectProps extends BaseElementProps {

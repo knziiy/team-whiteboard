@@ -352,6 +352,14 @@ export default function Board({ boardId, user, onBack }: Props) {
     updateElement(el, { ...el.props, fontSize: size } as StickyProps);
   }, [updateElement]);
 
+  const applyTextColorToSelected = useCallback((color: string) => {
+    const { selectedElementId, elements: els } = useBoardStore.getState();
+    if (!selectedElementId) return;
+    const el = els.get(selectedElementId);
+    if (!el || el.type !== 'sticky') return;
+    updateElement(el, { ...el.props, textColor: color } as StickyProps);
+  }, [updateElement]);
+
   // Get sticky being edited for textarea positioning
   const editingEl = editingId ? elements.get(editingId) : null;
   const editingProps = editingEl?.props as StickyProps | undefined;
@@ -397,7 +405,7 @@ export default function Board({ boardId, user, onBack }: Props) {
 
       {/* Tool palette */}
       <div className="absolute top-4 right-4 z-10">
-        <ToolPalette onApplyColor={applyColorToSelected} onApplyFontSize={applyFontSizeToSelected} />
+        <ToolPalette onApplyColor={applyColorToSelected} onApplyFontSize={applyFontSizeToSelected} onApplyTextColor={applyTextColorToSelected} />
       </div>
 
       {/* Online users */}
@@ -507,6 +515,7 @@ export default function Board({ boardId, user, onBack }: Props) {
               width: (editingProps.width ?? 160) * stageScale,
               height: (editingProps.height ?? 120) * stageScale,
               background: editingProps.fill ?? '#FFEB3B',
+              color: editingProps.textColor ?? '#1a1a1a',
               border: '2px solid #3B82F6',
               borderRadius: 4,
               padding: 8,
