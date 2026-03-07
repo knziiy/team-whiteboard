@@ -25,7 +25,8 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     case 'element_update': {
       const el = message.element;
       // createdBy は JWT 由来の userId で上書き（なりすまし防止）
-      const toSave = { ...el, createdBy: userId };
+      // boardId もサーバー側の値で上書き（boardId インジェクション防止）
+      const toSave = { ...el, createdBy: userId, boardId };
       await upsertElement(toSave);
       await broadcast(boardId, { type: message.type, element: toSave });
       break;
@@ -49,6 +50,10 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
       );
       break;
     }
+
+    case 'ping':
+      // keepalive: 接続を維持するための no-op メッセージ
+      break;
   }
 
   return { statusCode: 200, body: 'OK' };

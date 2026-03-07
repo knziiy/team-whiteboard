@@ -10,3 +10,4 @@ packages/frontend/dist/
 packages/shared/dist/
 packages/backend/dist/
 .claude/settings.local.json
+settings.local.json

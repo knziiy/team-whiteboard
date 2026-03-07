@@ -22,11 +22,16 @@ export interface ClientCursorMove {
   y: number;
 }
 
+export interface ClientPing {
+  type: 'ping';
+}
+
 export type ClientMessage =
   | ClientElementAdd
   | ClientElementUpdate
   | ClientElementDelete
-  | ClientCursorMove;
+  | ClientCursorMove
+  | ClientPing;
 
 // Server → Client messages
 export interface ServerInit {

@@ -37,11 +37,13 @@ export class FrontendStack extends cdk.Stack {
 
     // /ws → WebSocket API Gateway
     // ステージ名 "ws" に対応: CloudFront /ws → API GW /ws（パス一致）
+    // readTimeout をデフォルト30sから60sに延長（WebSocket keepalive との組み合わせで接続維持）
     const wsApiOrigin = new origins.HttpOrigin(api.wsApiDomain, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
       customHeaders: {
         'X-CF-Secret': cfSecret,
       },
+      readTimeout: cdk.Duration.seconds(60),
     });
 
     const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
