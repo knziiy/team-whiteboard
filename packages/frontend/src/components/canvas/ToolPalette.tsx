@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBoardStore } from '../../store/boardStore';
+import type { StickyProps } from '@whiteboard/shared';
 
 const TOOLS = [
   { id: 'select', label: 'Select', icon: '↖' },
@@ -18,13 +19,20 @@ const COLORS = [
 
 interface Props {
   onApplyColor?: (color: string) => void;
+  onApplyFontSize?: (size: number) => void;
 }
 
-export default function ToolPalette({ onApplyColor }: Props) {
+export default function ToolPalette({ onApplyColor, onApplyFontSize }: Props) {
   const activeTool = useBoardStore((s) => s.activeTool);
   const activeColor = useBoardStore((s) => s.activeColor);
   const setActiveTool = useBoardStore((s) => s.setActiveTool);
   const setActiveColor = useBoardStore((s) => s.setActiveColor);
+  const selectedElementId = useBoardStore((s) => s.selectedElementId);
+  const elements = useBoardStore((s) => s.elements);
+
+  const selectedEl = selectedElementId ? elements.get(selectedElementId) : null;
+  const isSticky = selectedEl?.type === 'sticky';
+  const currentFontSize = isSticky ? ((selectedEl!.props as StickyProps).fontSize ?? 14) : 14;
 
   return (
     <div className="flex flex-col gap-2 bg-white rounded-xl shadow-lg border p-2">
@@ -61,6 +69,20 @@ export default function ToolPalette({ onApplyColor }: Props) {
           ))}
         </div>
       </div>
+
+      {isSticky && (
+        <div className="border-t mt-1 pt-2 flex items-center justify-between gap-1">
+          <button
+            onClick={() => onApplyFontSize?.(Math.max(8, currentFontSize - 2))}
+            className="w-7 h-7 rounded hover:bg-gray-100 text-gray-700 text-base leading-none flex items-center justify-center"
+          >−</button>
+          <span className="text-xs text-gray-600 w-8 text-center">{currentFontSize}</span>
+          <button
+            onClick={() => onApplyFontSize?.(Math.min(72, currentFontSize + 2))}
+            className="w-7 h-7 rounded hover:bg-gray-100 text-gray-700 text-base leading-none flex items-center justify-center"
+          >＋</button>
+        </div>
+      )}
     </div>
   );
 }

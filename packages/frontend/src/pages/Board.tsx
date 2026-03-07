@@ -344,6 +344,14 @@ export default function Board({ boardId, user, onBack }: Props) {
     }
   }, [updateElement]);
 
+  const applyFontSizeToSelected = useCallback((size: number) => {
+    const { selectedElementId, elements: els } = useBoardStore.getState();
+    if (!selectedElementId) return;
+    const el = els.get(selectedElementId);
+    if (!el || el.type !== 'sticky') return;
+    updateElement(el, { ...el.props, fontSize: size } as StickyProps);
+  }, [updateElement]);
+
   // Get sticky being edited for textarea positioning
   const editingEl = editingId ? elements.get(editingId) : null;
   const editingProps = editingEl?.props as StickyProps | undefined;
@@ -389,7 +397,7 @@ export default function Board({ boardId, user, onBack }: Props) {
 
       {/* Tool palette */}
       <div className="absolute top-4 right-4 z-10">
-        <ToolPalette onApplyColor={applyColorToSelected} />
+        <ToolPalette onApplyColor={applyColorToSelected} onApplyFontSize={applyFontSizeToSelected} />
       </div>
 
       {/* Online users */}
