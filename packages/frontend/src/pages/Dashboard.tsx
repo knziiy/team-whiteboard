@@ -16,6 +16,8 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
   const [newTitle, setNewTitle] = useState('');
   const [newGroupId, setNewGroupId] = useState('');
   const [error, setError] = useState('');
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -44,6 +46,20 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
     } catch (err: any) {
       setError(err.message);
     }
+  };
+
+  const renameBoard = async (id: string) => {
+    if (!editingTitle.trim()) {
+      setEditingBoardId(null);
+      return;
+    }
+    try {
+      const updated = await api.boards.update(id, { title: editingTitle.trim() }, user.idToken);
+      setBoards((prev) => prev.map((b) => (b.id === id ? { ...b, title: updated.title } : b)));
+    } catch (err: any) {
+      setError(err.message);
+    }
+    setEditingBoardId(null);
   };
 
   const deleteBoard = async (id: string) => {
@@ -123,13 +139,39 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                   onClick={() => onSelectBoard(board.id)}
                   className="w-full text-left p-4"
                 >
-                  <h3 className="font-medium text-gray-900">{board.title}</h3>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {new Date(board.updatedAt).toLocaleDateString('ja-JP')}
-                  </p>
+                  {editingBoardId === board.id ? (
+                    <input
+                      type="text"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={() => renameBoard(board.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') renameBoard(board.id);
+                        if (e.key === 'Escape') setEditingBoardId(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                      className="w-full font-medium text-gray-900 border border-blue-400 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <h3 className="font-medium text-gray-900">{board.title}</h3>
+                  )}
+                  {board.groupId && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}
+                    </p>
+                  )}
                 </button>
                 {(user.isAdmin || board.createdBy === user.id) && (
-                  <div className="border-t px-4 py-2">
+                  <div className="border-t px-4 py-2 flex gap-3">
+                    {user.isAdmin && editingBoardId !== board.id && (
+                      <button
+                        onClick={() => { setEditingBoardId(board.id); setEditingTitle(board.title); }}
+                        className="text-xs text-blue-500 hover:text-blue-700"
+                      >
+                        名前変更
+                      </button>
+                    )}
                     <button
                       onClick={() => deleteBoard(board.id)}
                       className="text-xs text-red-500 hover:text-red-700"

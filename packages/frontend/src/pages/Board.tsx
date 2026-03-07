@@ -58,12 +58,17 @@ export default function Board({ boardId, user, onBack }: Props) {
   const panStart = useRef<{ px: number; py: number; sx: number; sy: number } | null>(null);
   const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
+  const [boardTitle, setBoardTitle] = useState('');
+
   // boardId が変わったらストアをクリアして REST API で初期要素を取得する
   // （WebSocket init の到着前や接続失敗時のフォールバック）
   useEffect(() => {
     let cancelled = false;
     const { setElements } = useBoardStore.getState();
     setElements([]); // 前のボードの残留要素をクリア
+    api.boards.get(boardId, user.idToken).then((b) => {
+      if (!cancelled) setBoardTitle(b.title);
+    }).catch(() => {});
     api.boards.listElements(boardId, user.idToken).then((els) => {
       if (!cancelled) setElements(els);
     }).catch(() => {
@@ -449,7 +454,7 @@ export default function Board({ boardId, user, onBack }: Props) {
         <button onClick={onBack} className="text-blue-600 text-sm hover:underline">
           ← 戻る
         </button>
-        <span className="text-sm text-gray-500">ボード</span>
+        <span className="text-sm font-medium text-gray-700">{boardTitle || 'ボード'}</span>
         <span className="text-xs text-gray-400">
           Delete: 削除　Ctrl+Z: Undo　Ctrl+Shift+Z: Redo　ダブルクリック: 付箋編集　Ctrl+ホイール: ズーム
         </span>
