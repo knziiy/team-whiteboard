@@ -75,6 +75,7 @@ function CognitoLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [company, setCompany] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -88,7 +89,7 @@ function CognitoLogin() {
       if (mode === 'login') {
         await login(email, password);
       } else if (mode === 'register') {
-        await register!(email, password, displayName);
+        await register!(email, password, displayName, company || undefined);
         setMessage('確認コードをメールに送信しました。');
         setMode('confirm');
       } else {
@@ -128,16 +129,28 @@ function CognitoLogin() {
           </div>
 
           {mode === 'register' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">表示名</label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">表示名</label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">会社名</label>
+                <input
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="任意"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
           )}
 
           {mode !== 'confirm' && (

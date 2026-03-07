@@ -18,6 +18,9 @@ export class AuthStack extends cdk.Stack {
         email: { required: true, mutable: true },
         fullname: { required: false, mutable: true },
       },
+      customAttributes: {
+        company: new cognito.StringAttribute({ minLen: 0, maxLen: 256, mutable: true }),
+      },
       passwordPolicy: {
         minLength: 8,
         requireLowercase: true,

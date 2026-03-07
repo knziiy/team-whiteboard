@@ -35,7 +35,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (...args: any[]) => any;
   logout: () => void;
-  register?: (email: string, password: string, displayName: string) => Promise<void>;
+  register?: (email: string, password: string, displayName: string, company?: string) => Promise<void>;
   confirm?: (email: string, code: string) => Promise<void>;
 }
 
@@ -122,16 +122,21 @@ export function useAuthProvider(): AuthContextValue {
     });
   }, []);
 
-  const cognitoRegister = useCallback(async (email: string, password: string, displayName: string): Promise<void> => {
+  const cognitoRegister = useCallback(async (email: string, password: string, displayName: string, company?: string): Promise<void> => {
     const { CognitoUserPool, CognitoUserAttribute } = await import('amazon-cognito-identity-js');
     const pool = new CognitoUserPool({
       UserPoolId: import.meta.env['VITE_COGNITO_USER_POOL_ID'] as string,
       ClientId: import.meta.env['VITE_COGNITO_CLIENT_ID'] as string,
     });
+    const attrs = [
+      new CognitoUserAttribute({ Name: 'email', Value: email }),
+      new CognitoUserAttribute({ Name: 'name', Value: displayName }),
+    ];
+    if (company) {
+      attrs.push(new CognitoUserAttribute({ Name: 'custom:company', Value: company }));
+    }
     return new Promise((resolve, reject) => {
-      pool.signUp(email, password,
-        [new CognitoUserAttribute({ Name: 'email', Value: email }), new CognitoUserAttribute({ Name: 'name', Value: displayName })],
-        [], (err) => (err ? reject(err) : resolve()));
+      pool.signUp(email, password, attrs, [], (err) => (err ? reject(err) : resolve()));
     });
   }, []);
 
