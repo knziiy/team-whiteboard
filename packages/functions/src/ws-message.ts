@@ -1,7 +1,13 @@
 import type { APIGatewayProxyWebsocketHandlerV2 } from 'aws-lambda';
 import type { ClientMessage } from '@whiteboard/shared';
-import { getConnection, upsertElement, deleteElement } from './lib/dynamo.js';
-import { broadcast, broadcastCursor } from './lib/apigw.js';
+import {
+  getConnection,
+  getConnectionsByBoard,
+  getElementsByBoard,
+  upsertElement,
+  deleteElement,
+} from './lib/dynamo.js';
+import { sendToConnection, broadcast, broadcastCursor } from './lib/apigw.js';
 
 export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
   const connectionId = event.requestContext.connectionId;
@@ -52,6 +58,33 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
         { type: 'cursor_move', userId, x: message.x, y: message.y },
         connectionId,
       );
+      break;
+    }
+
+    case 'request_init': {
+      // $connect 完了後にクライアントから送信される初期化リクエスト
+      const existingConns = await getConnectionsByBoard(boardId);
+      const seen = new Map<string, { userId: string; displayName: string }>();
+      for (const c of existingConns) {
+        if (!seen.has(c.userId)) {
+          seen.set(c.userId, { userId: c.userId, displayName: c.displayName });
+        }
+      }
+      const onlineUsers = Array.from(seen.values());
+      const elements = await getElementsByBoard(boardId);
+      await sendToConnection(connectionId, { type: 'init', elements, onlineUsers });
+
+      // 同一ユーザーの初回接続のみ user_joined をブロードキャスト
+      const sameUserConns = existingConns.filter(
+        (c) => c.userId === userId && c.connectionId !== connectionId,
+      );
+      if (sameUserConns.length === 0) {
+        await broadcast(
+          boardId,
+          { type: 'user_joined', user: { userId, displayName: conn.displayName } },
+          connectionId,
+        );
+      }
       break;
     }
 

@@ -24,6 +24,8 @@ export function useWebSocket(boardId: string, token: string | null) {
 
     ws.onopen = () => {
       retryCount.current = 0;
+      // 接続確立後に init データをリクエスト
+      ws.send(JSON.stringify({ type: 'request_init' }));
       // 未送信メッセージをフラッシュ
       const pending = pendingRef.current.splice(0);
       for (const msg of pending) {

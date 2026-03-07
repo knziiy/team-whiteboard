@@ -26,12 +26,17 @@ export interface ClientPing {
   type: 'ping';
 }
 
+export interface ClientRequestInit {
+  type: 'request_init';
+}
+
 export type ClientMessage =
   | ClientElementAdd
   | ClientElementUpdate
   | ClientElementDelete
   | ClientCursorMove
-  | ClientPing;
+  | ClientPing
+  | ClientRequestInit;
 
 // Server → Client messages
 export interface ServerInit {

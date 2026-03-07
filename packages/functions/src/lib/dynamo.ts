@@ -48,7 +48,7 @@ export async function getConnection(
   connectionId: string,
 ): Promise<ConnectionItem | null> {
   const res = await ddb.send(
-    new GetCommand({ TableName: T.connections, Key: { connectionId } }),
+    new GetCommand({ TableName: T.connections, Key: { connectionId }, ConsistentRead: true }),
   );
   return (res.Item as ConnectionItem) ?? null;
 }

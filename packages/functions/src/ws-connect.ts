@@ -5,13 +5,7 @@ type WsConnectEvent = APIGatewayProxyWebsocketEventV2 & {
   queryStringParameters?: Record<string, string>;
 };
 import { verifyToken } from './lib/auth.js';
-import {
-  putConnection,
-  getConnectionsByBoard,
-  getBoard,
-} from './lib/dynamo.js';
-import { getElementsByBoard } from './lib/dynamo.js';
-import { sendToConnection, broadcast } from './lib/apigw.js';
+import { putConnection, getBoard } from './lib/dynamo.js';
 
 export const handler: APIGatewayProxyWebsocketHandlerV2 = async (rawEvent) => {
   const event = rawEvent as WsConnectEvent;
@@ -40,6 +34,10 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (rawEvent) => {
   }
 
   // 接続を登録
+  // NOTE: $connect ハンドラー実行中は API GW の接続が未確立のため
+  // sendToConnection を呼ぶと GoneException → deleteConnection で
+  // 書き込み直後のレコードが削除されてしまう。
+  // init データの送信は $connect 完了後にクライアントが request_init を送って行う。
   await putConnection({
     connectionId,
     boardId,
@@ -48,36 +46,6 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (rawEvent) => {
     ttl: Math.floor(Date.now() / 1000) + 86400,
   });
   console.log('[ws-connect] connected', { connectionId, boardId, userId: user.id });
-
-  // 既存接続から onlineUsers を構築（重複排除）
-  const existingConns = await getConnectionsByBoard(boardId);
-  const seen = new Map<string, { userId: string; displayName: string }>();
-  for (const c of existingConns) {
-    if (!seen.has(c.userId)) {
-      seen.set(c.userId, { userId: c.userId, displayName: c.displayName });
-    }
-  }
-  const onlineUsers = Array.from(seen.values());
-
-  // 全要素を取得して init を送信
-  const elements = await getElementsByBoard(boardId);
-  await sendToConnection(connectionId, {
-    type: 'init',
-    elements,
-    onlineUsers,
-  });
-
-  // 同一ユーザーの初回接続のみ user_joined をブロードキャスト
-  const sameUserConns = existingConns.filter(
-    (c) => c.userId === user.id && c.connectionId !== connectionId,
-  );
-  if (sameUserConns.length === 0) {
-    await broadcast(
-      boardId,
-      { type: 'user_joined', user: { userId: user.id, displayName: user.displayName } },
-      connectionId,
-    );
-  }
 
   return { statusCode: 200, body: 'Connected' };
 };

@@ -11,11 +11,12 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
 
   const conn = await getConnection(connectionId);
   if (!conn) {
-    // TTL で既に削除済み等
+    console.warn('[ws-disconnect] connection not found (TTL expired?)', { connectionId });
     return { statusCode: 200, body: 'OK' };
   }
 
   const { boardId, userId } = conn;
+  console.log('[ws-disconnect] disconnecting', { connectionId, boardId, userId });
 
   await deleteConnection(connectionId);
 
