@@ -5,12 +5,14 @@
     "packages/shared",
     "packages/frontend",
     "packages/backend",
+    "packages/functions",
     "infra"
   ],
   "scripts": {
     "dev:backend": "npm run dev --workspace=packages/backend",
     "dev:frontend": "npm run dev --workspace=packages/frontend",
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=packages/backend && npm run build --workspace=packages/frontend",
+    "build:functions": "npm run build --workspace=packages/functions",
     "migrate": "npm run migrate --workspace=packages/backend"
   }
 }

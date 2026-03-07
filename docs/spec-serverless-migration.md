@@ -504,9 +504,12 @@ dynamodb-local:
 
 ---
 
-## 14. 未解決事項（実装前に確認）
+## 14. 決定事項
 
-1. **グループ非メンバーのボードアクセス制御**: 現行は groupId がないボードは全員アクセス可。仕様踏襲するか？
-2. **ボード削除時の elements 一括削除**: DynamoDB は cascade delete がないため BatchWriteItem で明示削除が必要。要素が多い場合は複数バッチになる。
-3. **`wb-users` の初期データ**: 現行 EC2 環境の PostgreSQL データを DynamoDB に移行するか、リセットするか？
-4. **CloudFront WebSocket**: CloudFront は WebSocket をサポートしているが、HTTP/1.1 Upgrade が必要。API GW WebSocket のエンドポイントをオリジンに設定する際、`wss://` ではなく `https://` として設定し CloudFront が upgrade する構成を使う。
+1. **グループ非メンバーのボードアクセス制御**: `groupId` がないボードは**管理者のみ**アクセス可。一般ユーザーは自分が所属するグループのボードのみ閲覧可能。
+
+2. **ボード削除時の elements 一括削除**: `BatchWriteItem`（最大25件/バッチ）を繰り返して全要素を明示削除する。
+
+3. **既存データ移行**: 行わない。DynamoDB は新規データのみで運用開始。
+
+4. **CloudFront + WebSocket**: CloudFront オリジンには `https://` で API GW WebSocket エンドポイントを設定し、CloudFront が WebSocket Upgrade を中継する構成を採用。

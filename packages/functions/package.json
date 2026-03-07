@@ -1,0 +1,27 @@
+{
+  "name": "@whiteboard/functions",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "dev:local": "LOCAL_AUTH=true npx tsx src/local-server.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.600.0",
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "@whiteboard/shared": "*",
+    "jose": "^5.3.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.140",
+    "@types/node": "^20.12.12",
+    "@types/uuid": "^10.0.0",
+    "esbuild": "^0.21.5",
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.5"
+  }
+}
