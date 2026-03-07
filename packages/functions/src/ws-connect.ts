@@ -47,6 +47,7 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (rawEvent) => {
     displayName: user.displayName,
     ttl: Math.floor(Date.now() / 1000) + 86400,
   });
+  console.log('[ws-connect] connected', { connectionId, boardId, userId: user.id });
 
   // 既存接続から onlineUsers を構築（重複排除）
   const existingConns = await getConnectionsByBoard(boardId);

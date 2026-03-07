@@ -9,6 +9,7 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
   // 接続情報を取得して boardId・userId を解決
   const conn = await getConnection(connectionId);
   if (!conn) {
+    console.error('[ws-message] connection not found', { connectionId });
     return { statusCode: 410, body: 'Connection not found' };
   }
   const { boardId, userId } = conn;
@@ -20,6 +21,8 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
+  console.log('[ws-message]', { connectionId, boardId, type: message.type });
+
   switch (message.type) {
     case 'element_add':
     case 'element_update': {
@@ -28,6 +31,7 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
       // boardId もサーバー側の値で上書き（boardId インジェクション防止）
       const toSave = { ...el, createdBy: userId, boardId };
       await upsertElement(toSave);
+      console.log('[ws-message] saved element', { elementId: toSave.id, boardId });
       await broadcast(boardId, { type: message.type, element: toSave });
       break;
     }

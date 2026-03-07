@@ -13,9 +13,10 @@ const env = {
   region: 'us-east-1',
 };
 
-// CloudFront secret - read from environment or use default (change before deploy)
+// CloudFront secret - must match the value configured in CloudFront custom header
+// To rotate: update this value AND redeploy both WhiteboardApi and WhiteboardFrontend together
 const cfSecret =
-  process.env['CLOUDFRONT_SECRET'] ?? 'change-me-cloudfront-secret-' + Date.now();
+  process.env['CLOUDFRONT_SECRET'] ?? '7d83e96a2c21b854b996faa20f648a71e8db9955a12c0c5e72b2db834aabc96a';
 
 // デプロイ順序: Auth → Data → Api → Frontend
 
