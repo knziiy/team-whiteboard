@@ -36,6 +36,7 @@ export default function Board({ boardId, user, onBack }: Props) {
   const upsertElement = useBoardStore((s) => s.upsertElement);
   const removeElement = useBoardStore((s) => s.removeElement);
   const undo = useBoardStore((s) => s.undo);
+  const redo = useBoardStore((s) => s.redo);
 
   const { send } = useWebSocket(boardId, user.idToken);
 
@@ -299,9 +300,21 @@ export default function Board({ boardId, user, onBack }: Props) {
       }
 
       // Undo (Ctrl+Z / Cmd+Z)
-      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !inTextInput) {
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !inTextInput) {
         e.preventDefault();
         const result: UndoResult | null = undo();
+        if (!result) return;
+        if (result.type === 'delete') {
+          send({ type: 'element_delete', elementId: result.id });
+        } else {
+          send({ type: 'element_update', element: result.element });
+        }
+      }
+
+      // Redo (Ctrl+Shift+Z / Cmd+Shift+Z)
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey && !inTextInput) {
+        e.preventDefault();
+        const result: UndoResult | null = redo();
         if (!result) return;
         if (result.type === 'delete') {
           send({ type: 'element_delete', elementId: result.id });
@@ -322,7 +335,7 @@ export default function Board({ boardId, user, onBack }: Props) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editingId, commitEdit, removeElement, send, setSelectedElement, undo, user.id]);
+  }, [editingId, commitEdit, removeElement, send, setSelectedElement, undo, redo, user.id]);
 
   const updateElement = useCallback(
     (el: BoardElement, newProps: BoardElement['props']) => {
@@ -360,6 +373,24 @@ export default function Board({ boardId, user, onBack }: Props) {
     updateElement(el, { ...el.props, textColor: color } as StickyProps);
   }, [updateElement]);
 
+  const bringToFront = useCallback(() => {
+    const { selectedElementId, elements: els } = useBoardStore.getState();
+    if (!selectedElementId) return;
+    const el = els.get(selectedElementId);
+    if (!el) return;
+    const maxZ = Math.max(...Array.from(els.values()).map((e) => e.zIndex));
+    sendElement({ ...el, zIndex: maxZ + 1 });
+  }, [sendElement]);
+
+  const sendToBack = useCallback(() => {
+    const { selectedElementId, elements: els } = useBoardStore.getState();
+    if (!selectedElementId) return;
+    const el = els.get(selectedElementId);
+    if (!el) return;
+    const minZ = Math.min(...Array.from(els.values()).map((e) => e.zIndex));
+    sendElement({ ...el, zIndex: minZ - 1 });
+  }, [sendElement]);
+
   // Get sticky being edited for textarea positioning
   const editingEl = editingId ? elements.get(editingId) : null;
   const editingProps = editingEl?.props as StickyProps | undefined;
@@ -373,7 +404,7 @@ export default function Board({ boardId, user, onBack }: Props) {
         </button>
         <span className="text-sm text-gray-500">ボード</span>
         <span className="text-xs text-gray-400">
-          Delete: 削除　Ctrl+Z: Undo　ダブルクリック: 付箋編集　Ctrl+ホイール: ズーム
+          Delete: 削除　Ctrl+Z: Undo　Ctrl+Shift+Z: Redo　ダブルクリック: 付箋編集　Ctrl+ホイール: ズーム
         </span>
         <div className="flex items-center gap-1 border border-gray-200 rounded overflow-hidden">
           <button
@@ -405,7 +436,13 @@ export default function Board({ boardId, user, onBack }: Props) {
 
       {/* Tool palette */}
       <div className="absolute top-4 right-4 z-10">
-        <ToolPalette onApplyColor={applyColorToSelected} onApplyFontSize={applyFontSizeToSelected} onApplyTextColor={applyTextColorToSelected} />
+        <ToolPalette
+          onApplyColor={applyColorToSelected}
+          onApplyFontSize={applyFontSizeToSelected}
+          onApplyTextColor={applyTextColorToSelected}
+          onBringToFront={bringToFront}
+          onSendToBack={sendToBack}
+        />
       </div>
 
       {/* Online users */}

@@ -21,9 +21,11 @@ interface Props {
   onApplyColor?: (color: string) => void;
   onApplyFontSize?: (size: number) => void;
   onApplyTextColor?: (color: string) => void;
+  onBringToFront?: () => void;
+  onSendToBack?: () => void;
 }
 
-export default function ToolPalette({ onApplyColor, onApplyFontSize, onApplyTextColor }: Props) {
+export default function ToolPalette({ onApplyColor, onApplyFontSize, onApplyTextColor, onBringToFront, onSendToBack }: Props) {
   const activeTool = useBoardStore((s) => s.activeTool);
   const activeColor = useBoardStore((s) => s.activeColor);
   const setActiveTool = useBoardStore((s) => s.setActiveTool);
@@ -34,6 +36,7 @@ export default function ToolPalette({ onApplyColor, onApplyFontSize, onApplyText
   const selectedEl = selectedElementId ? elements.get(selectedElementId) : null;
   const isSticky = selectedEl?.type === 'sticky';
   const currentFontSize = isSticky ? ((selectedEl!.props as StickyProps).fontSize ?? 14) : 14;
+  const hasSelection = selectedEl != null;
 
   return (
     <div className="flex flex-col gap-2 bg-white rounded-xl shadow-lg border p-2">
@@ -51,6 +54,21 @@ export default function ToolPalette({ onApplyColor, onApplyFontSize, onApplyText
           {tool.icon}
         </button>
       ))}
+
+      {hasSelection && (
+        <div className="border-t mt-1 pt-2 flex flex-col gap-1">
+          <button
+            onClick={onBringToFront}
+            title="最前面に移動"
+            className="w-full text-xs text-gray-600 hover:bg-gray-100 rounded px-1 py-1 text-left"
+          >↑ 最前面</button>
+          <button
+            onClick={onSendToBack}
+            title="最背面に移動"
+            className="w-full text-xs text-gray-600 hover:bg-gray-100 rounded px-1 py-1 text-left"
+          >↓ 最背面</button>
+        </div>
+      )}
 
       <div className="border-t mt-1 pt-2">
         <div className="grid grid-cols-2 gap-1">
