@@ -158,7 +158,8 @@ export class ApiStack extends cdk.Stack {
     });
 
     // Management API 権限
-    const managementArn = `arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/ws/@connections/*`;
+    // ARN は stage/method/@connections/* の形式が正しい（/POST/ が必要）
+    const managementArn = `arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/ws/POST/@connections/*`;
     const wsManagementPolicy = new iam.PolicyStatement({
       actions: ['execute-api:ManageConnections'],
       resources: [managementArn],
