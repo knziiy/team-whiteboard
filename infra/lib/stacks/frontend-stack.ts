@@ -5,10 +5,10 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 import * as path from 'path';
-import type { ComputeStack } from './compute-stack';
+import type { ApiStack } from './api-stack';
 
 interface FrontendStackProps extends cdk.StackProps {
-  compute: ComputeStack;
+  api: ApiStack;
   cfSecret: string;
 }
 
@@ -18,7 +18,7 @@ export class FrontendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: FrontendStackProps) {
     super(scope, id, props);
 
-    const { compute, cfSecret } = props;
+    const { api, cfSecret } = props;
 
     // S3 bucket for SPA
     const bucket = new s3.Bucket(this, 'FrontendBucket', {
@@ -27,9 +27,18 @@ export class FrontendStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    const ec2Origin = new origins.HttpOrigin(compute.elasticIp.ref, {
-      httpPort: 8080,
-      protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+    // /api/* → HTTP API Gateway
+    const restApiOrigin = new origins.HttpOrigin(api.httpApiDomain, {
+      protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+      customHeaders: {
+        'X-CF-Secret': cfSecret,
+      },
+    });
+
+    // /ws → WebSocket API Gateway
+    // ステージ名 "ws" に対応: CloudFront /ws → API GW /ws（パス一致）
+    const wsApiOrigin = new origins.HttpOrigin(api.wsApiDomain, {
+      protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
       customHeaders: {
         'X-CF-Secret': cfSecret,
       },
@@ -46,21 +55,21 @@ export class FrontendStack extends cdk.Stack {
       },
       additionalBehaviors: {
         '/api/*': {
-          origin: ec2Origin,
+          origin: restApiOrigin,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         },
         '/ws': {
-          origin: ec2Origin,
+          origin: wsApiOrigin,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         },
         '/health': {
-          origin: ec2Origin,
+          origin: restApiOrigin,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,

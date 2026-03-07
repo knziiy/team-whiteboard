@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { NetworkStack } from '../lib/stacks/network-stack';
 import { AuthStack } from '../lib/stacks/auth-stack';
-import { ComputeStack } from '../lib/stacks/compute-stack';
+import { DataStack } from '../lib/stacks/data-stack';
+import { ApiStack } from '../lib/stacks/api-stack';
 import { FrontendStack } from '../lib/stacks/frontend-stack';
 import { WafStack } from '../lib/stacks/waf-stack';
 
@@ -20,24 +20,27 @@ const allowedCidrs: string[] = app.node.tryGetContext('allowedCidrs') ?? ['0.0.0
 const cfSecret =
   process.env['CLOUDFRONT_SECRET'] ?? 'change-me-cloudfront-secret-' + Date.now();
 
-const networkStack = new NetworkStack(app, 'WhiteboardNetwork', { env });
+// デプロイ順序: Auth → Data → Api → Frontend → Waf
 
 const authStack = new AuthStack(app, 'WhiteboardAuth', { env });
 
-const computeStack = new ComputeStack(app, 'WhiteboardCompute', {
+const dataStack = new DataStack(app, 'WhiteboardData', { env });
+dataStack.addDependency(authStack);
+
+const apiStack = new ApiStack(app, 'WhiteboardApi', {
   env,
-  network: networkStack,
+  data: dataStack,
   auth: authStack,
+  cfSecret,
 });
-computeStack.addDependency(networkStack);
-computeStack.addDependency(authStack);
+apiStack.addDependency(dataStack);
 
 const frontendStack = new FrontendStack(app, 'WhiteboardFrontend', {
   env,
-  compute: computeStack,
+  api: apiStack,
   cfSecret,
 });
-frontendStack.addDependency(computeStack);
+frontendStack.addDependency(apiStack);
 
 const wafStack = new WafStack(app, 'WhiteboardWaf', {
   env,
