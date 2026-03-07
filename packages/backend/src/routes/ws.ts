@@ -102,6 +102,7 @@ const wsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Join room and send init
+      const alreadyPresent = roomManager.hasUser(boardId, wsUser.id);
       roomManager.join(boardId, socketId, {
         ws: socket,
         userId: wsUser.id,
@@ -125,11 +126,14 @@ const wsRoutes: FastifyPluginAsync = async (fastify) => {
         }),
       );
 
-      roomManager.broadcast(
-        boardId,
-        { type: 'user_joined', user: { userId: wsUser.id, displayName: wsUser.displayName } },
-        socketId,
-      );
+      // Only announce if this is the user's first socket in the room
+      if (!alreadyPresent) {
+        roomManager.broadcast(
+          boardId,
+          { type: 'user_joined', user: { userId: wsUser.id, displayName: wsUser.displayName } },
+          socketId,
+        );
+      }
 
       socket.on('message', async (raw: Buffer | string) => {
         try {
@@ -145,7 +149,10 @@ const wsRoutes: FastifyPluginAsync = async (fastify) => {
       socket.on('close', () => {
         if (boardId) {
           roomManager.leave(boardId, socketId);
-          roomManager.broadcast(boardId, { type: 'user_left', userId: wsUser.id });
+          // Only announce departure if the user has no remaining sockets in the room
+          if (!roomManager.hasUser(boardId, wsUser.id)) {
+            roomManager.broadcast(boardId, { type: 'user_left', userId: wsUser.id });
+          }
         }
       });
     } catch (err) {

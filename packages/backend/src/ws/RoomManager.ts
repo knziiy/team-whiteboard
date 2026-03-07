@@ -47,13 +47,25 @@ export class RoomManager {
     }
   }
 
+  hasUser(boardId: string, userId: string): boolean {
+    const room = this.rooms.get(boardId);
+    if (!room) return false;
+    for (const c of room.values()) {
+      if (c.userId === userId) return true;
+    }
+    return false;
+  }
+
   getOnlineUsers(boardId: string): OnlineUser[] {
     const room = this.rooms.get(boardId);
     if (!room) return [];
-    return Array.from(room.values()).map((c) => ({
-      userId: c.userId,
-      displayName: c.displayName,
-    }));
+    const seen = new Map<string, OnlineUser>();
+    for (const c of room.values()) {
+      if (!seen.has(c.userId)) {
+        seen.set(c.userId, { userId: c.userId, displayName: c.displayName });
+      }
+    }
+    return Array.from(seen.values());
   }
 }
 
