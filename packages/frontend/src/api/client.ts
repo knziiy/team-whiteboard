@@ -49,5 +49,7 @@ export const api = {
   },
   users: {
     list: (token: string) => request<any[]>('/users', { token }),
+    upsertMe: (token: string) =>
+      request<void>('/users/me', { method: 'POST', token }),
   },
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useContext, createContext } from 'react';
+import { api } from '../api/client';
 
 export interface AuthUser {
   id: string;
@@ -87,6 +88,8 @@ export function useAuthProvider(): AuthContextValue {
     const authUser: AuthUser = { ...u, idToken: token };
     localStorage.setItem(LOCAL_STORAGE_KEY, token);
     setUser(authUser);
+    // DynamoDB にユーザー情報を登録（ローカル開発でも DynamoDB Local に保存）
+    api.users.upsertMe(token).catch(() => {});
     return authUser;
   }, []);
 
@@ -105,7 +108,13 @@ export function useAuthProvider(): AuthContextValue {
       new CognitoUser({ Username: email, Pool: pool }).authenticateUser(
         new AuthenticationDetails({ Username: email, Password: password }),
         {
-          onSuccess: (session) => { const u = parseCognitoSession(session); setUser(u); resolve(u); },
+          onSuccess: (session) => {
+            const u = parseCognitoSession(session);
+            setUser(u);
+            // DynamoDB にユーザー情報を登録
+            api.users.upsertMe(u.idToken).catch(() => {});
+            resolve(u);
+          },
           onFailure: reject,
           newPasswordRequired: () => reject(new Error('New password required. Please contact admin.')),
         },

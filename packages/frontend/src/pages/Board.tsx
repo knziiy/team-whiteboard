@@ -249,7 +249,7 @@ export default function Board({ boardId, user, onBack }: Props) {
       const pos = toCanvas(rawPos.x, rawPos.y);
 
       const now = Date.now();
-      if (now - lastCursorSend.current > 30) {
+      if (now - lastCursorSend.current > 500) {
         lastCursorSend.current = now;
         send({ type: 'cursor_move', x: pos.x, y: pos.y });
       }
