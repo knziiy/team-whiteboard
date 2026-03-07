@@ -3,10 +3,12 @@ import { useBoardStore } from '../../store/boardStore';
 
 interface Props {
   currentUserId: string;
+  stageScale: number;
+  stagePos: { x: number; y: number };
 }
 
 // Rendered as DOM overlay outside the canvas, positioned absolutely
-export default function UserPresence({ currentUserId }: Props) {
+export default function UserPresence({ currentUserId, stageScale, stagePos }: Props) {
   const cursors = useBoardStore((s) => s.cursors);
   const onlineUsers = useBoardStore((s) => s.onlineUsers);
 
@@ -17,13 +19,16 @@ export default function UserPresence({ currentUserId }: Props) {
         .map((cursor) => {
           const user = onlineUsers.find((u) => u.userId === cursor.userId);
           const label = user?.displayName ?? cursor.userId;
+          // cursor coords are in canvas space; convert to screen space
+          const screenX = cursor.x * stageScale + stagePos.x;
+          const screenY = cursor.y * stageScale + stagePos.y;
           return (
             <div
               key={cursor.userId}
               style={{
                 position: 'absolute',
-                left: cursor.x,
-                top: cursor.y,
+                left: screenX,
+                top: screenY,
                 pointerEvents: 'none',
                 userSelect: 'none',
                 zIndex: 100,

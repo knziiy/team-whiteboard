@@ -47,6 +47,48 @@ export default function Board({ boardId, user, onBack }: Props) {
   const lastCursorSend = useRef(0);
   const stageContainerRef = useRef<HTMLDivElement>(null);
 
+  // ── Zoom / Pan state ─────────────────────────────────────────────────────────
+  const [stageScale, setStageScale] = useState(1);
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
+  const isPanning = useRef(false);
+  const panStart = useRef<{ px: number; py: number; sx: number; sy: number } | null>(null);
+  const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  useEffect(() => {
+    const onResize = () => setStageSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Convert screen pointer position to canvas coordinates
+  const toCanvas = useCallback((px: number, py: number) => ({
+    x: (px - stagePos.x) / stageScale,
+    y: (py - stagePos.y) / stageScale,
+  }), [stagePos, stageScale]);
+
+  const handleWheel = useCallback((e: KonvaEventObject<WheelEvent>) => {
+    e.evt.preventDefault();
+    const stage = e.target.getStage()!;
+    const pointer = stage.getPointerPosition()!;
+
+    if (e.evt.ctrlKey || e.evt.metaKey) {
+      // Zoom centered on cursor
+      const SCALE_FACTOR = 1.08;
+      const direction = e.evt.deltaY < 0 ? 1 : -1;
+      const newScale = Math.min(4, Math.max(0.1, stageScale * (direction > 0 ? SCALE_FACTOR : 1 / SCALE_FACTOR)));
+      const newX = pointer.x - (pointer.x - stagePos.x) * (newScale / stageScale);
+      const newY = pointer.y - (pointer.y - stagePos.y) * (newScale / stageScale);
+      setStageScale(newScale);
+      setStagePos({ x: newX, y: newY });
+    } else if (e.evt.shiftKey) {
+      // Horizontal pan
+      setStagePos((prev) => ({ x: prev.x - e.evt.deltaY, y: prev.y }));
+    } else {
+      // Vertical pan (also support deltaX for trackpads)
+      setStagePos((prev) => ({ x: prev.x - e.evt.deltaX, y: prev.y - e.evt.deltaY }));
+    }
+  }, [stageScale, stagePos]);
+
   const sendElement = useCallback(
     (element: BoardElement, type: 'element_add' | 'element_update' = 'element_update') => {
       // Only record undo history for the current user's own elements
@@ -89,12 +131,20 @@ export default function Board({ boardId, user, onBack }: Props) {
       }
 
       if (activeTool === 'select') {
-        if (e.target === e.target.getStage()) setSelectedElement(null);
+        if (e.target === e.target.getStage()) {
+          setSelectedElement(null);
+          // Start panning
+          const stage = e.target.getStage()!;
+          const ptr = stage.getPointerPosition()!;
+          isPanning.current = true;
+          panStart.current = { px: ptr.x, py: ptr.y, sx: stagePos.x, sy: stagePos.y };
+        }
         return;
       }
 
       const stage = e.target.getStage()!;
-      const pos = stage.getPointerPosition()!;
+      const rawPos = stage.getPointerPosition()!;
+      const pos = toCanvas(rawPos.x, rawPos.y);
       const id = uuidv4();
 
       if (activeTool === 'sticky') {
@@ -179,13 +229,23 @@ export default function Board({ boardId, user, onBack }: Props) {
       }
     },
     [activeTool, activeColor, boardId, editingId, commitEdit, elements.size,
-     sendElement, setActiveTool, setSelectedElement, startEditing, user.id],
+     sendElement, setActiveTool, setSelectedElement, startEditing, user.id, stagePos, toCanvas],
   );
 
   const handleStageMouseMove = useCallback(
     (e: KonvaEventObject<MouseEvent>) => {
       const stage = e.target.getStage()!;
-      const pos = stage.getPointerPosition()!;
+      const rawPos = stage.getPointerPosition()!;
+
+      // Panning
+      if (isPanning.current && panStart.current) {
+        const dx = rawPos.x - panStart.current.px;
+        const dy = rawPos.y - panStart.current.py;
+        setStagePos({ x: panStart.current.sx + dx, y: panStart.current.sy + dy });
+        return;
+      }
+
+      const pos = toCanvas(rawPos.x, rawPos.y);
 
       const now = Date.now();
       if (now - lastCursorSend.current > 30) {
@@ -207,10 +267,12 @@ export default function Board({ boardId, user, onBack }: Props) {
 
       if (now % 100 < 30) send({ type: 'element_update', element: updated });
     },
-    [send, upsertElement],
+    [send, upsertElement, toCanvas],
   );
 
   const handleStageMouseUp = useCallback(() => {
+    isPanning.current = false;
+    panStart.current = null;
     if (isDrawing.current && drawingId.current) {
       const el = useBoardStore.getState().elements.get(drawingId.current);
       if (el) send({ type: 'element_update', element: el });
@@ -270,6 +332,18 @@ export default function Board({ boardId, user, onBack }: Props) {
     [sendElement],
   );
 
+  const applyColorToSelected = useCallback((color: string) => {
+    const { selectedElementId, elements: els } = useBoardStore.getState();
+    if (!selectedElementId) return;
+    const el = els.get(selectedElementId);
+    if (!el) return;
+    if (el.type === 'sticky' || el.type === 'rect' || el.type === 'circle') {
+      updateElement(el, { ...el.props, fill: color } as BoardElement['props']);
+    } else if (el.type === 'arrow' || el.type === 'freehand') {
+      updateElement(el, { ...el.props, stroke: color } as BoardElement['props']);
+    }
+  }, [updateElement]);
+
   // Get sticky being edited for textarea positioning
   const editingEl = editingId ? elements.get(editingId) : null;
   const editingProps = editingEl?.props as StickyProps | undefined;
@@ -283,13 +357,39 @@ export default function Board({ boardId, user, onBack }: Props) {
         </button>
         <span className="text-sm text-gray-500">ボード</span>
         <span className="text-xs text-gray-400">
-          Delete: 削除　Ctrl+Z: Undo　ダブルクリック: 付箋編集
+          Delete: 削除　Ctrl+Z: Undo　ダブルクリック: 付箋編集　Ctrl+ホイール: ズーム
         </span>
+        <div className="flex items-center gap-1 border border-gray-200 rounded overflow-hidden">
+          <button
+            onClick={() => {
+              const cx = stageSize.width / 2;
+              const cy = stageSize.height / 2;
+              const newScale = Math.max(0.1, stageScale / 1.25);
+              setStagePos({ x: cx - (cx - stagePos.x) * (newScale / stageScale), y: cy - (cy - stagePos.y) * (newScale / stageScale) });
+              setStageScale(newScale);
+            }}
+            className="px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 text-sm leading-none"
+          >−</button>
+          <button
+            onClick={() => { setStageScale(1); setStagePos({ x: 0, y: 0 }); }}
+            className="px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-100 border-x border-gray-200"
+          >{Math.round(stageScale * 100)}%</button>
+          <button
+            onClick={() => {
+              const cx = stageSize.width / 2;
+              const cy = stageSize.height / 2;
+              const newScale = Math.min(4, stageScale * 1.25);
+              setStagePos({ x: cx - (cx - stagePos.x) * (newScale / stageScale), y: cy - (cy - stagePos.y) * (newScale / stageScale) });
+              setStageScale(newScale);
+            }}
+            className="px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 text-sm leading-none"
+          >＋</button>
+        </div>
       </div>
 
       {/* Tool palette */}
       <div className="absolute top-4 right-4 z-10">
-        <ToolPalette />
+        <ToolPalette onApplyColor={applyColorToSelected} />
       </div>
 
       {/* Online users */}
@@ -298,12 +398,17 @@ export default function Board({ boardId, user, onBack }: Props) {
       {/* Canvas */}
       <div ref={stageContainerRef} className="relative flex-1">
         <Stage
-          width={window.innerWidth}
-          height={window.innerHeight}
+          width={stageSize.width}
+          height={stageSize.height}
+          x={stagePos.x}
+          y={stagePos.y}
+          scaleX={stageScale}
+          scaleY={stageScale}
           onMouseDown={handleStageMouseDown}
           onMouseMove={handleStageMouseMove}
           onMouseUp={handleStageMouseUp}
-          style={{ cursor: activeTool === 'select' ? 'default' : 'crosshair' }}
+          onWheel={handleWheel}
+          style={{ cursor: activeTool === 'select' ? 'grab' : 'crosshair' }}
         >
           <Layer>
             {Array.from(elements.values())
@@ -389,15 +494,15 @@ export default function Board({ boardId, user, onBack }: Props) {
             }}
             style={{
               position: 'absolute',
-              left: editingProps.x,
-              top: editingProps.y,
-              width: editingProps.width ?? 160,
-              height: editingProps.height ?? 120,
+              left: editingProps.x * stageScale + stagePos.x,
+              top: editingProps.y * stageScale + stagePos.y,
+              width: (editingProps.width ?? 160) * stageScale,
+              height: (editingProps.height ?? 120) * stageScale,
               background: editingProps.fill ?? '#FFEB3B',
               border: '2px solid #3B82F6',
               borderRadius: 4,
               padding: 8,
-              fontSize: editingProps.fontSize ?? 14,
+              fontSize: (editingProps.fontSize ?? 14) * stageScale,
               fontFamily: 'inherit',
               resize: 'none',
               outline: 'none',
@@ -407,7 +512,7 @@ export default function Board({ boardId, user, onBack }: Props) {
         )}
 
         {/* Cursor overlay */}
-        <UserPresence currentUserId={user.id} />
+        <UserPresence currentUserId={user.id} stageScale={stageScale} stagePos={stagePos} />
       </div>
     </div>
   );
