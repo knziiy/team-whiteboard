@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(docker info:*)",
+      "Bash(open:*)",
+      "Bash(docker compose:*)",
+      "Bash(curl:*)",
+      "Bash(DATABASE_URL=postgres://wb:localpassword@localhost:5432/whiteboards PORT=8080 npm run:*)"
+    ]
+  }
+}

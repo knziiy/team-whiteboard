@@ -1,0 +1,137 @@
+import React from 'react';
+import { Group, Rect, Text, Circle } from 'react-konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
+import type { StickyProps } from '@whiteboard/shared';
+
+interface Props {
+  id: string;
+  props: StickyProps;
+  isSelected: boolean;
+  isEditing: boolean;
+  onSelect: () => void;
+  onDblClick: () => void;
+  onChange: (props: StickyProps) => void;
+}
+
+const MIN_W = 80;
+const MIN_H = 60;
+const HANDLE_R = 6;
+
+export default function StickyNote({ props, isSelected, isEditing, onSelect, onDblClick, onChange }: Props) {
+  const w = props.width ?? 160;
+  const h = props.height ?? 120;
+
+  const stopBubble = (e: KonvaEventObject<MouseEvent>) => { e.cancelBubble = true; };
+
+  // Corner handles: [dx, dy] offsets from (props.x, props.y)
+  const handles = [
+    { id: 'br', cx: w, cy: h },   // bottom-right
+    { id: 'bl', cx: 0, cy: h },   // bottom-left
+    { id: 'tr', cx: w, cy: 0 },   // top-right
+    { id: 'tl', cx: 0, cy: 0 },   // top-left
+  ] as const;
+
+  const handleDragEnd = (handleId: string, dx: number, dy: number) => {
+    let { x, y } = props;
+    let newW = w;
+    let newH = h;
+
+    if (handleId === 'br') {
+      newW = Math.max(MIN_W, w + dx);
+      newH = Math.max(MIN_H, h + dy);
+    } else if (handleId === 'bl') {
+      const dw = Math.min(dx, w - MIN_W);
+      x = x + dw;
+      newW = Math.max(MIN_W, w - dw);
+      newH = Math.max(MIN_H, h + dy);
+    } else if (handleId === 'tr') {
+      newW = Math.max(MIN_W, w + dx);
+      const dh = Math.min(dy, h - MIN_H);
+      y = y + dh;
+      newH = Math.max(MIN_H, h - dh);
+    } else if (handleId === 'tl') {
+      const dw = Math.min(dx, w - MIN_W);
+      const dh = Math.min(dy, h - MIN_H);
+      x = x + dw;
+      y = y + dh;
+      newW = Math.max(MIN_W, w - dw);
+      newH = Math.max(MIN_H, h - dh);
+    }
+
+    onChange({ ...props, x, y, width: newW, height: newH });
+  };
+
+  return (
+    <Group
+      x={props.x}
+      y={props.y}
+      draggable={!isEditing}
+      onClick={(e) => { stopBubble(e); onSelect(); }}
+      onTap={onSelect}
+      onDblClick={(e) => { stopBubble(e); onDblClick(); }}
+      onDragEnd={(e) => {
+        onChange({ ...props, x: e.target.x(), y: e.target.y() });
+      }}
+    >
+      <Rect
+        width={w}
+        height={h}
+        fill={props.fill ?? '#ffffff'}
+        shadowBlur={isSelected ? 0 : 3}
+        shadowColor="rgba(0,0,0,0.15)"
+        cornerRadius={4}
+        stroke={isSelected ? '#3B82F6' : '#d1d5db'}
+        strokeWidth={isSelected ? 2 : 1}
+      />
+      {!isEditing && (
+        <Text
+          text={props.text || (isSelected ? 'ダブルクリックで編集' : '')}
+          width={w}
+          height={h}
+          padding={8}
+          fontSize={props.fontSize ?? 14}
+          fill={props.text ? '#1a1a1a' : '#9ca3af'}
+          wrap="word"
+          listening={false}
+        />
+      )}
+
+      {/* Resize handles — only when selected and not editing */}
+      {isSelected && !isEditing && handles.map(({ id, cx, cy }) => {
+        // Starting position for drag tracking
+        let startX = 0;
+        let startY = 0;
+
+        return (
+          <Circle
+            key={id}
+            x={cx}
+            y={cy}
+            radius={HANDLE_R}
+            fill="white"
+            stroke="#3B82F6"
+            strokeWidth={2}
+            draggable
+            onMouseDown={(e) => {
+              e.cancelBubble = true;
+              startX = e.target.x();
+              startY = e.target.y();
+            }}
+            onDragMove={(e) => {
+              e.cancelBubble = true;
+            }}
+            onDragEnd={(e) => {
+              e.cancelBubble = true;
+              const dx = e.target.x() - startX;
+              const dy = e.target.y() - startY;
+              // Reset handle position (shape drives position)
+              e.target.x(cx);
+              e.target.y(cy);
+              handleDragEnd(id, dx, dy);
+            }}
+          />
+        );
+      })}
+    </Group>
+  );
+}
