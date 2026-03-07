@@ -47,6 +47,8 @@ export default function Board({ boardId, user, onBack }: Props) {
   const drawingId = useRef<string | null>(null);
   const lastCursorSend = useRef(0);
   const stageContainerRef = useRef<HTMLDivElement>(null);
+  const clipboardEl = useRef<BoardElement | null>(null);
+  const pasteCount = useRef(0);
 
   // ── Zoom / Pan state ─────────────────────────────────────────────────────────
   const [stageScale, setStageScale] = useState(1);
@@ -297,6 +299,36 @@ export default function Board({ boardId, user, onBack }: Props) {
         removeElement(selectedElementId, isOwn);
         send({ type: 'element_delete', elementId: selectedElementId });
         setSelectedElement(null);
+      }
+
+      // Copy (Ctrl+C / Cmd+C)
+      if (e.key === 'c' && (e.ctrlKey || e.metaKey) && !inTextInput) {
+        const { selectedElementId, elements } = useBoardStore.getState();
+        if (!selectedElementId) return;
+        const el = elements.get(selectedElementId);
+        if (!el) return;
+        clipboardEl.current = el;
+        pasteCount.current = 0;
+      }
+
+      // Paste (Ctrl+V / Cmd+V)
+      if (e.key === 'v' && (e.ctrlKey || e.metaKey) && !inTextInput) {
+        const src = clipboardEl.current;
+        if (!src) return;
+        e.preventDefault();
+        pasteCount.current += 1;
+        const offset = pasteCount.current * 20;
+        const pasted: BoardElement = {
+          ...src,
+          id: uuidv4(),
+          createdBy: user.id,
+          updatedAt: new Date().toISOString(),
+          props: { ...src.props, x: (src.props as any).x + offset, y: (src.props as any).y + offset },
+        };
+        const { upsertElement, setSelectedElement } = useBoardStore.getState();
+        upsertElement(pasted, true);
+        send({ type: 'element_add', element: pasted });
+        setSelectedElement(pasted.id);
       }
 
       // Undo (Ctrl+Z / Cmd+Z)
