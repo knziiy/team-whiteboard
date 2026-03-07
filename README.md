@@ -214,12 +214,14 @@ aws cognito-idp admin-add-user-to-group \
 
 | 方向 | type | 説明 |
 |------|------|------|
-| S→C | `init` | 接続時の全要素 + オンラインユーザー一覧 |
+| S→C | `init` | 全要素 + オンラインユーザー一覧 |
 | S→C | `element_add/update/delete` | 要素変更のブロードキャスト |
 | S→C | `cursor_move` | 他ユーザーのカーソル位置 |
 | S→C | `user_joined/left` | 入退室通知 |
+| C→S | `request_init` | 接続確立直後に送信し `init` を要求 |
 | C→S | `element_add/update/delete` | 要素操作 |
 | C→S | `cursor_move` | カーソル位置（500ms スロットル） |
+| C→S | `ping` | keepalive（25s 間隔） |
 
 ---
 
