@@ -5,7 +5,6 @@ import { AuthStack } from '../lib/stacks/auth-stack';
 import { DataStack } from '../lib/stacks/data-stack';
 import { ApiStack } from '../lib/stacks/api-stack';
 import { FrontendStack } from '../lib/stacks/frontend-stack';
-import { WafStack } from '../lib/stacks/waf-stack';
 
 const app = new cdk.App();
 
@@ -14,13 +13,11 @@ const env = {
   region: 'us-east-1',
 };
 
-const allowedCidrs: string[] = app.node.tryGetContext('allowedCidrs') ?? ['0.0.0.0/0'];
-
 // CloudFront secret - read from environment or use default (change before deploy)
 const cfSecret =
   process.env['CLOUDFRONT_SECRET'] ?? 'change-me-cloudfront-secret-' + Date.now();
 
-// デプロイ順序: Auth → Data → Api → Frontend → Waf
+// デプロイ順序: Auth → Data → Api → Frontend
 
 const authStack = new AuthStack(app, 'WhiteboardAuth', { env });
 
@@ -41,12 +38,5 @@ const frontendStack = new FrontendStack(app, 'WhiteboardFrontend', {
   cfSecret,
 });
 frontendStack.addDependency(apiStack);
-
-const wafStack = new WafStack(app, 'WhiteboardWaf', {
-  env,
-  frontend: frontendStack,
-  allowedCidrs,
-});
-wafStack.addDependency(frontendStack);
 
 app.synth();

@@ -2,9 +2,11 @@ node_modules/
 dist/
 .env
 .env.local
+.env.production
 *.js.map
 *.d.ts.map
 cdk.out/
 packages/frontend/dist/
 packages/shared/dist/
 packages/backend/dist/
+.claude/settings.local.json
