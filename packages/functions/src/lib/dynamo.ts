@@ -15,7 +15,12 @@ const isLocal = process.env['LOCAL_AUTH'] === 'true';
 
 const client = new DynamoDBClient(
   isLocal
-    ? { endpoint: 'http://localhost:8000', region: 'us-east-1' }
+    ? {
+        endpoint: 'http://localhost:8000',
+        region: 'us-east-1',
+        // DynamoDB Local はダミー認証情報で動作する
+        credentials: { accessKeyId: 'local', secretAccessKey: 'local' },
+      }
     : {},
 );
 export const ddb = DynamoDBDocumentClient.from(client, {

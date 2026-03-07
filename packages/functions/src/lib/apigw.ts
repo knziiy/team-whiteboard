@@ -27,6 +27,13 @@ export async function sendToConnection(
   connectionId: string,
   message: ServerMessage,
 ): Promise<void> {
+  // ローカル開発モード: Management API の代わりにインプロセスマップを使用
+  if (process.env['LOCAL_WS'] === 'true') {
+    const { sendLocalMessage } = await import('./localWs.js');
+    sendLocalMessage(connectionId, JSON.stringify(message));
+    return;
+  }
+
   try {
     await getClient().send(
       new PostToConnectionCommand({

@@ -1,4 +1,9 @@
-import type { APIGatewayProxyWebsocketHandlerV2 } from 'aws-lambda';
+import type { APIGatewayProxyWebsocketHandlerV2, APIGatewayProxyWebsocketEventV2 } from 'aws-lambda';
+
+// @types/aws-lambda の型定義に queryStringParameters が含まれていないため補完
+type WsConnectEvent = APIGatewayProxyWebsocketEventV2 & {
+  queryStringParameters?: Record<string, string>;
+};
 import { verifyToken } from './lib/auth.js';
 import {
   putConnection,
@@ -8,7 +13,8 @@ import {
 import { getElementsByBoard } from './lib/dynamo.js';
 import { sendToConnection, broadcast } from './lib/apigw.js';
 
-export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
+export const handler: APIGatewayProxyWebsocketHandlerV2 = async (rawEvent) => {
+  const event = rawEvent as WsConnectEvent;
   const connectionId = event.requestContext.connectionId;
   const qs = event.queryStringParameters ?? {};
   const boardId = qs['boardId'];

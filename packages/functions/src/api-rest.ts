@@ -1,4 +1,4 @@
-import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+import type { APIGatewayProxyHandlerV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyAuthHeader, verifyCloudfrontSecret } from './lib/auth.js';
 import { HttpError } from './lib/types.js';
@@ -57,7 +57,7 @@ async function route(
   method: string,
   path: string,
   event: Parameters<APIGatewayProxyHandlerV2>[0],
-): ReturnType<APIGatewayProxyHandlerV2> {
+): Promise<APIGatewayProxyStructuredResultV2> {
   // /health
   if (path === '/health' || path === '/api/health') {
     return respond(200, { status: 'ok' });
