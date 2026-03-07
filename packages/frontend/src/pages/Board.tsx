@@ -12,6 +12,7 @@ import type {
 } from '@whiteboard/shared';
 import { useBoardStore, type UndoResult } from '../store/boardStore';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { api } from '../api/client';
 import ToolPalette from '../components/canvas/ToolPalette';
 import StickyNote from '../components/canvas/StickyNote';
 import { RectNode, CircleNode } from '../components/canvas/ShapeNode';
@@ -56,6 +57,20 @@ export default function Board({ boardId, user, onBack }: Props) {
   const isPanning = useRef(false);
   const panStart = useRef<{ px: number; py: number; sx: number; sy: number } | null>(null);
   const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  // boardId が変わったらストアをクリアして REST API で初期要素を取得する
+  // （WebSocket init の到着前や接続失敗時のフォールバック）
+  useEffect(() => {
+    let cancelled = false;
+    const { setElements } = useBoardStore.getState();
+    setElements([]); // 前のボードの残留要素をクリア
+    api.boards.listElements(boardId, user.idToken).then((els) => {
+      if (!cancelled) setElements(els);
+    }).catch(() => {
+      // エラー時は WebSocket init に委ねる
+    });
+    return () => { cancelled = true; };
+  }, [boardId, user.idToken]);
 
   useEffect(() => {
     const onResize = () => setStageSize({ width: window.innerWidth, height: window.innerHeight });

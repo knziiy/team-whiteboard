@@ -44,6 +44,8 @@ export async function sendToConnection(
   } catch (err) {
     if (err instanceof GoneException) {
       await deleteConnection(connectionId);
+    } else {
+      console.error('[apigw] sendToConnection error', { connectionId, err });
     }
   }
 }

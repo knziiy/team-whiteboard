@@ -29,6 +29,8 @@ export const api = {
       request<any>(`/boards/${id}`, { method: 'PATCH', body: JSON.stringify(body), token }),
     delete: (id: string, token: string) =>
       request<void>(`/boards/${id}`, { method: 'DELETE', token }),
+    listElements: (id: string, token: string) =>
+      request<any[]>(`/boards/${id}/elements`, { token }),
   },
   groups: {
     list: (token: string) => request<any[]>('/groups', { token }),
