@@ -18,6 +18,7 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
   const [error, setError] = useState('');
   const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [changingGroupBoardId, setChangingGroupBoardId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -188,6 +189,14 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                           名前変更
                         </button>
                       )}
+                      {user.isAdmin && groups.length > 0 && changingGroupBoardId !== board.id && (
+                        <button
+                          onClick={() => setChangingGroupBoardId(board.id)}
+                          className="text-xs text-blue-500 hover:text-blue-700"
+                        >
+                          グループ変更
+                        </button>
+                      )}
                       <button
                         onClick={() => deleteBoard(board.id)}
                         className="text-xs text-red-500 hover:text-red-700"
@@ -195,10 +204,15 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                         削除
                       </button>
                     </div>
-                    {user.isAdmin && groups.length > 0 && (
+                    {changingGroupBoardId === board.id && (
                       <select
                         value={board.groupId ?? ''}
-                        onChange={(e) => changeBoardGroup(board.id, e.target.value)}
+                        onChange={(e) => {
+                          changeBoardGroup(board.id, e.target.value);
+                          setChangingGroupBoardId(null);
+                        }}
+                        onBlur={() => setChangingGroupBoardId(null)}
+                        autoFocus
                         className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="">グループなし</option>
