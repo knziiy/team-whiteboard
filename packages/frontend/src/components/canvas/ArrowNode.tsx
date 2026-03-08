@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Arrow, Circle, Group } from 'react-konva';
-import { useState } from 'react';
 import type { ArrowProps } from '@whiteboard/shared';
 
 interface Props {
@@ -12,11 +11,24 @@ interface Props {
 }
 
 export default function ArrowNode({ id, props, isSelected, onSelect, onChange }: Props) {
-  const points = props.points;
-  const [x1, y1, x2, y2] = points.length >= 4 ? points : [0, 0, 100, 0];
+  const basePoints = props.points.length >= 4 ? props.points : [0, 0, 100, 0];
 
-  const updatePoint = (index: 0 | 1, x: number, y: number) => {
-    const newPoints = [...points];
+  // ドラッグ中のリアルタイム表示用ローカル状態
+  const [dragPoints, setDragPoints] = useState<number[] | null>(null);
+
+  const displayPoints = dragPoints ?? basePoints;
+  const [x1, y1, x2, y2] = displayPoints;
+
+  const handleDragMove = (index: 0 | 1, x: number, y: number) => {
+    const newPoints = [...basePoints];
+    newPoints[index * 2] = x;
+    newPoints[index * 2 + 1] = y;
+    setDragPoints(newPoints);
+  };
+
+  const handleDragEnd = (index: 0 | 1, x: number, y: number) => {
+    setDragPoints(null);
+    const newPoints = [...basePoints];
     newPoints[index * 2] = x;
     newPoints[index * 2 + 1] = y;
     onChange({ ...props, points: newPoints });
@@ -42,7 +54,8 @@ export default function ArrowNode({ id, props, isSelected, onSelect, onChange }:
             stroke="#3B82F6"
             strokeWidth={2}
             draggable
-            onDragEnd={(e) => updatePoint(0, e.target.x(), e.target.y())}
+            onDragMove={(e) => handleDragMove(0, e.target.x(), e.target.y())}
+            onDragEnd={(e) => handleDragEnd(0, e.target.x(), e.target.y())}
           />
           <Circle
             x={x2}
@@ -52,7 +65,8 @@ export default function ArrowNode({ id, props, isSelected, onSelect, onChange }:
             stroke="#3B82F6"
             strokeWidth={2}
             draggable
-            onDragEnd={(e) => updatePoint(1, e.target.x(), e.target.y())}
+            onDragMove={(e) => handleDragMove(1, e.target.x(), e.target.y())}
+            onDragEnd={(e) => handleDragEnd(1, e.target.x(), e.target.y())}
           />
         </>
       )}
