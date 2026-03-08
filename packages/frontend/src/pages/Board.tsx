@@ -254,7 +254,7 @@ export default function Board({ boardId, user, onBack }: Props) {
           id,
           boardId,
           type: 'arrow',
-          props: { points: [pos.x, pos.y, pos.x + 100, pos.y], stroke: activeColor } as ArrowProps,
+          props: { points: [pos.x, pos.y, pos.x + 100, pos.y], stroke: '#000000' } as ArrowProps,
           zIndex: elements.size,
           createdBy: user.id,
           updatedAt: new Date().toISOString(),
