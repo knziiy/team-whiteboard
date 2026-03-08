@@ -143,13 +143,7 @@ npm run build --workspace=packages/shared
 npm run build --workspace=packages/frontend
 ```
 
-### 2. CloudFront シークレット設定
-
-```bash
-export CLOUDFRONT_SECRET=$(openssl rand -hex 32)
-```
-
-### 3. CDK デプロイ
+### 2. CDK デプロイ
 
 ```bash
 cd infra
@@ -158,6 +152,8 @@ npx cdk deploy --all
 ```
 
 デプロイ順序: `WhiteboardAuth` → `WhiteboardData` → `WhiteboardApi` → `WhiteboardFrontend` → `WhiteboardWaf`
+
+> **CloudFront シークレット**: CloudFront → API Gateway 間のオリジン検証シークレットは、初回デプロイ時に AWS Secrets Manager（`whiteboard/cloudfront-secret`）で自動生成・永続化されます。手動設定は不要です。
 
 出力例:
 ```
