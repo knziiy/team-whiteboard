@@ -143,23 +143,35 @@ npm run build --workspace=packages/frontend
 
 ### 2. CDK デプロイ
 
+`-c env=<環境名>` で環境を指定します（デフォルト: `dev`）。同一 AWS アカウントに複数環境をデプロイ可能です。
+
 ```bash
 cd infra
 npm install
-npx cdk deploy --all
+
+# dev 環境
+npx cdk deploy --all -c env=dev
+
+# prod 環境
+npx cdk deploy --all -c env=prod
 ```
 
-デプロイ順序: `WhiteboardAuth` → `WhiteboardData` → `WhiteboardApi` → `WhiteboardFrontend`
+デプロイ順序: `Whiteboard-{Env}-Auth` → `Whiteboard-{Env}-Data` → `Whiteboard-{Env}-Api` → `Whiteboard-{Env}-Frontend`
 
-> **CloudFront シークレット**: CloudFront → API Gateway 間のオリジン検証シークレットは、初回デプロイ時に AWS Secrets Manager（`whiteboard/cloudfront-secret`）で自動生成・永続化されます。手動設定は不要です。
+環境ごとに以下のリソースが分離されます:
+- DynamoDB テーブル: `wb-{env}-connections`, `wb-{env}-boards` 等
+- Cognito UserPool: `whiteboard-{env}-users`
+- Secrets Manager: `whiteboard/{env}/cloudfront-secret`
 
-出力例:
+> **CloudFront シークレット**: CloudFront → API Gateway 間のオリジン検証シークレットは、初回デプロイ時に AWS Secrets Manager で自動生成・永続化されます。手動設定は不要です。
+
+出力例（dev 環境）:
 ```
-WhiteboardAuth.UserPoolId         = us-east-1_XXXXXXXXX
-WhiteboardAuth.UserPoolClientId   = XXXXXXXXXXXXXXXXXXXXXXXXXX
-WhiteboardApi.HttpApiEndpoint     = https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
-WhiteboardApi.WsApiEndpoint       = wss://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/ws
-WhiteboardFrontend.CloudFrontUrl  = https://xxxxxxxxxxxx.cloudfront.net
+Whiteboard-Dev-Auth.UserPoolId         = us-east-1_XXXXXXXXX
+Whiteboard-Dev-Auth.UserPoolClientId   = XXXXXXXXXXXXXXXXXXXXXXXXXX
+Whiteboard-Dev-Api.HttpApiEndpoint     = https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
+Whiteboard-Dev-Api.WsApiEndpoint       = wss://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/ws
+Whiteboard-Dev-Frontend.CloudFrontUrl  = https://xxxxxxxxxxxx.cloudfront.net
 ```
 
 ### 3. フロントエンド環境変数を更新して再デプロイ
@@ -167,7 +179,7 @@ WhiteboardFrontend.CloudFrontUrl  = https://xxxxxxxxxxxx.cloudfront.net
 CDK 出力の Cognito 値を `packages/frontend/.env.production` に設定後:
 ```bash
 npm run build --workspace=packages/frontend
-cd infra && npx cdk deploy WhiteboardFrontend
+cd infra && npx cdk deploy Whiteboard-Dev-Frontend -c env=dev
 ```
 
 ---

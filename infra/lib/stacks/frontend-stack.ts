@@ -9,6 +9,7 @@ import * as path from 'path';
 import type { ApiStack } from './api-stack';
 
 interface FrontendStackProps extends cdk.StackProps {
+  envName: string;
   api: ApiStack;
   cfSecret: secretsmanager.ISecret;
 }

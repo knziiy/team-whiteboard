@@ -11,6 +11,7 @@ import type { DataStack } from './data-stack';
 import type { AuthStack } from './auth-stack';
 
 interface ApiStackProps extends cdk.StackProps {
+  envName: string;
   data: DataStack;
   auth: AuthStack;
   cfSecret: secretsmanager.ISecret;

@@ -3,6 +3,10 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
+interface DataStackProps extends cdk.StackProps {
+  envName: string;
+}
+
 export class DataStack extends cdk.Stack {
   public readonly connectionsTable: dynamodb.Table;
   public readonly elementsTable: dynamodb.Table;
@@ -12,12 +16,15 @@ export class DataStack extends cdk.Stack {
   public readonly groupMembersTable: dynamodb.Table;
   public readonly cfSecret: secretsmanager.Secret;
 
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
 
-    // wb-connections: PK=connectionId, GSI boardId-index, TTL on `ttl`
+    const { envName } = props;
+    const prefix = `wb-${envName}`;
+
+    // wb-{env}-connections: PK=connectionId, GSI boardId-index, TTL on `ttl`
     this.connectionsTable = new dynamodb.Table(this, 'Connections', {
-      tableName: 'wb-connections',
+      tableName: `${prefix}-connections`,
       partitionKey: { name: 'connectionId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       timeToLiveAttribute: 'ttl',
@@ -29,42 +36,42 @@ export class DataStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-    // wb-elements: PK=boardId, SK=elementId
+    // wb-{env}-elements: PK=boardId, SK=elementId
     this.elementsTable = new dynamodb.Table(this, 'Elements', {
-      tableName: 'wb-elements',
+      tableName: `${prefix}-elements`,
       partitionKey: { name: 'boardId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'elementId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // wb-boards: PK=boardId
+    // wb-{env}-boards: PK=boardId
     this.boardsTable = new dynamodb.Table(this, 'Boards', {
-      tableName: 'wb-boards',
+      tableName: `${prefix}-boards`,
       partitionKey: { name: 'boardId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // wb-users: PK=userId
+    // wb-{env}-users: PK=userId
     this.usersTable = new dynamodb.Table(this, 'Users', {
-      tableName: 'wb-users',
+      tableName: `${prefix}-users`,
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // wb-groups: PK=groupId
+    // wb-{env}-groups: PK=groupId
     this.groupsTable = new dynamodb.Table(this, 'Groups', {
-      tableName: 'wb-groups',
+      tableName: `${prefix}-groups`,
       partitionKey: { name: 'groupId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // wb-group-members: PK=groupId, SK=userId, GSI userId-index
+    // wb-{env}-group-members: PK=groupId, SK=userId, GSI userId-index
     this.groupMembersTable = new dynamodb.Table(this, 'GroupMembers', {
-      tableName: 'wb-group-members',
+      tableName: `${prefix}-group-members`,
       partitionKey: { name: 'groupId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -78,7 +85,7 @@ export class DataStack extends cdk.Stack {
 
     // CloudFront origin verification secret
     this.cfSecret = new secretsmanager.Secret(this, 'CloudFrontSecret', {
-      secretName: 'whiteboard/cloudfront-secret',
+      secretName: `whiteboard/${envName}/cloudfront-secret`,
       description: 'CloudFront origin verification secret',
       generateSecretString: {
         excludePunctuation: true,

@@ -29,8 +29,8 @@ npm run dev:frontend        # Frontend on :5173 (Vite, proxies /api and /ws to :
 # Type checking
 npm run typecheck --workspace=packages/functions  # tsc --noEmit
 
-# CDK deploy
-cd infra && npx cdk deploy --all
+# CDK deploy (env=dev by default, use -c env=prod for production)
+cd infra && npx cdk deploy --all -c env=dev
 ```
 
 DynamoDB Local uses `-inMemory` mode: data is lost on container restart. Re-run `npm run dev:tables` after restart.
@@ -70,19 +70,23 @@ Browser (React SPA)
 
 ### CDK Stacks (deploy order)
 
-1. `WhiteboardAuth` — Cognito UserPool + "Admins" group + client
-2. `WhiteboardData` — 6 DynamoDB tables (PAY_PER_REQUEST, all DESTROY)
-3. `WhiteboardApi` — 4 Lambda functions (NodejsFunction) + HTTP API GW + WebSocket API GW
-4. `WhiteboardFrontend` — S3 + CloudFront (S3 origin + API GW origins)
+Environment-aware: `-c env=dev` (default) or `-c env=prod`. Stack names and resource names include the env prefix.
+
+1. `Whiteboard-{Env}-Auth` — Cognito UserPool + "Admins" group + client
+2. `Whiteboard-{Env}-Data` — 6 DynamoDB tables (PAY_PER_REQUEST, all DESTROY) + Secrets Manager
+3. `Whiteboard-{Env}-Api` — 4 Lambda functions (NodejsFunction) + HTTP API GW + WebSocket API GW
+4. `Whiteboard-{Env}-Frontend` — S3 + CloudFront (S3 origin + API GW origins)
 
 ### DynamoDB Tables
 
-- `wb-connections` (PK: connectionId, GSI: boardId-index, TTL)
-- `wb-elements` (PK: boardId, SK: elementId)
-- `wb-boards` (PK: boardId)
-- `wb-users` (PK: userId)
-- `wb-groups` (PK: groupId)
-- `wb-group-members` (PK: groupId, SK: userId, GSI: userId-index)
+Table names are prefixed with `wb-{env}-` (e.g., `wb-dev-boards`, `wb-prod-boards`).
+
+- `wb-{env}-connections` (PK: connectionId, GSI: boardId-index, TTL)
+- `wb-{env}-elements` (PK: boardId, SK: elementId)
+- `wb-{env}-boards` (PK: boardId)
+- `wb-{env}-users` (PK: userId)
+- `wb-{env}-groups` (PK: groupId)
+- `wb-{env}-group-members` (PK: groupId, SK: userId, GSI: userId-index)
 
 ### WebSocket Protocol
 

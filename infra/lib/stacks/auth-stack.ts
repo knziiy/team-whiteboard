@@ -2,15 +2,21 @@ import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 
+interface AuthStackProps extends cdk.StackProps {
+  envName: string;
+}
+
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
 
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, props);
 
+    const { envName } = props;
+
     this.userPool = new cognito.UserPool(this, 'UserPool', {
-      userPoolName: 'whiteboard-users',
+      userPoolName: `whiteboard-${envName}-users`,
       selfSignUpEnabled: true,
       signInAliases: { email: true },
       autoVerify: { email: true },
@@ -41,7 +47,7 @@ export class AuthStack extends cdk.Stack {
 
     this.userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
       userPool: this.userPool,
-      userPoolClientName: 'whiteboard-client',
+      userPoolClientName: `whiteboard-${envName}-client`,
       authFlows: {
         userSrp: true,
         userPassword: true,
