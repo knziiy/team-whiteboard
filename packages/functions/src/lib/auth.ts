@@ -48,8 +48,9 @@ export async function verifyToken(token: string): Promise<AuthUser> {
     email;
   const cognitoGroups = (payload['cognito:groups'] as string[]) ?? [];
   const isAdmin = cognitoGroups.includes('Admins');
+  const company = (payload['custom:company'] as string) ?? undefined;
 
-  return { id: sub, email, displayName, isAdmin };
+  return { id: sub, email, displayName, isAdmin, company };
 }
 
 /**

@@ -156,6 +156,7 @@ async function handleUpsertMe(user: AuthUser) {
     email: user.email,
     displayName: user.displayName,
     isAdmin: user.isAdmin,
+    company: user.company,
     createdAt: existing?.createdAt ?? now,
   });
   return respond(200, { ok: true });
@@ -167,6 +168,7 @@ async function handleListUsers() {
     id: u.userId,
     email: u.email,
     displayName: u.displayName,
+    company: u.company ?? '',
   })));
 }
 
@@ -333,7 +335,7 @@ async function handleListMembers(groupId: string) {
   const userMap = new Map(users.map((u) => [u.userId, u]));
   return respond(200, members.map((m) => {
     const u = userMap.get(m.userId);
-    return { userId: m.userId, email: u?.email ?? '', displayName: u?.displayName ?? '' };
+    return { userId: m.userId, email: u?.email ?? '', displayName: u?.displayName ?? '', company: u?.company ?? '' };
   }));
 }
 

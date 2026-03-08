@@ -244,6 +244,7 @@ export interface UserItem {
   email: string;
   displayName: string;
   isAdmin: boolean;
+  company?: string;
   createdAt: string;
 }
 

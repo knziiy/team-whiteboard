@@ -97,7 +97,7 @@ export default function Admin({ user, onBack }: Props) {
           <p className="mb-6 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg">{error}</p>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className={`grid grid-cols-1 gap-8 ${selectedGroup ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-2'}`}>
           {/* Groups list */}
           <div>
             <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">グループ</h2>
@@ -149,41 +149,72 @@ export default function Admin({ user, onBack }: Props) {
               <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">
                 {selectedGroup.name} のメンバー
               </h2>
-              <ul className="space-y-1 mb-6">
-                {members.map((m) => (
-                  <li key={m.userId} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 transition">
-                    <div>
-                      <span className="text-sm text-gray-900">{m.displayName}</span>
-                      <span className="text-xs text-gray-400 ml-2">{m.email}</span>
-                    </div>
-                    <button
-                      onClick={() => removeMember(m.userId)}
-                      className="text-xs text-gray-300 hover:text-red-500 transition"
-                    >
-                      削除
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {members.length > 0 ? (
+                <table className="w-full text-sm mb-6">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">名前</th>
+                      <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">メール</th>
+                      <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">会社名</th>
+                      <th className="w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={m.userId} className="border-b border-gray-50 hover:bg-gray-50 transition">
+                        <td className="py-2.5 text-gray-900">{m.displayName}</td>
+                        <td className="py-2.5 text-gray-500">{m.email}</td>
+                        <td className="py-2.5 text-gray-500">{m.company || ''}</td>
+                        <td className="py-2.5 text-right">
+                          <button
+                            onClick={() => removeMember(m.userId)}
+                            className="text-xs text-gray-300 hover:text-red-500 transition"
+                          >
+                            削除
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-sm text-gray-400 mb-6">メンバーがいません</p>
+              )}
+
               <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">ユーザーを追加</h3>
-              <ul className="space-y-1">
-                {users
-                  .filter((u) => !memberIds.has(u.id))
-                  .map((u) => (
-                    <li key={u.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 transition">
-                      <div>
-                        <span className="text-sm text-gray-900">{u.displayName}</span>
-                        <span className="text-xs text-gray-400 ml-2">{u.email}</span>
-                      </div>
-                      <button
-                        onClick={() => addMember(u.id)}
-                        className="text-xs text-gray-400 hover:text-gray-900 transition"
-                      >
-                        追加
-                      </button>
-                    </li>
-                  ))}
-              </ul>
+              {users.filter((u) => !memberIds.has(u.id)).length > 0 ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">名前</th>
+                      <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">メール</th>
+                      <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">会社名</th>
+                      <th className="w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users
+                      .filter((u) => !memberIds.has(u.id))
+                      .map((u) => (
+                        <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50 transition">
+                          <td className="py-2.5 text-gray-900">{u.displayName}</td>
+                          <td className="py-2.5 text-gray-500">{u.email}</td>
+                          <td className="py-2.5 text-gray-500">{u.company || ''}</td>
+                          <td className="py-2.5 text-right">
+                            <button
+                              onClick={() => addMember(u.id)}
+                              className="text-xs text-gray-400 hover:text-gray-900 transition"
+                            >
+                              追加
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-sm text-gray-400">追加可能なユーザーがいません</p>
+              )}
             </div>
           )}
         </div>

@@ -168,7 +168,7 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
             {boards.map((board) => (
               <div
                 key={board.id}
-                className="group relative rounded-xl border border-gray-100 bg-white hover:border-gray-300 transition-all"
+                className="group relative rounded-xl border border-gray-300 bg-white hover:border-gray-400 transition-all"
               >
                 {editingBoardId === board.id ? (
                   <div className="w-full text-left p-5">
