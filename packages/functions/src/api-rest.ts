@@ -173,10 +173,15 @@ async function handleListUsers() {
 }
 
 async function handleListBoards(user: AuthUser) {
-  const all = await scanBoards();
+  const [all, users] = await Promise.all([scanBoards(), scanUsers()]);
+  const userMap = new Map(users.map((u) => [u.userId, u]));
+  const toApi = (b: Awaited<ReturnType<typeof scanBoards>>[number]) => ({
+    ...boardToApi(b),
+    createdByName: userMap.get(b.createdBy)?.displayName ?? '',
+  });
 
   if (user.isAdmin) {
-    return respond(200, all.map(boardToApi));
+    return respond(200, all.map(toApi));
   }
 
   const myGroupIds = await getGroupsByUser(user.id);
@@ -186,7 +191,7 @@ async function handleListBoards(user: AuthUser) {
     return false;
     // groupIdなし かつ 作成者でもない → アクセス不可（仕様 14-1）
   });
-  return respond(200, accessible.map(boardToApi));
+  return respond(200, accessible.map(toApi));
 }
 
 async function handleCreateBoard(user: AuthUser, body: Record<string, unknown>) {

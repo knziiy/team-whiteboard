@@ -21,6 +21,7 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
   const [editingTitle, setEditingTitle] = useState('');
   const [changingGroupBoardId, setChangingGroupBoardId] = useState<string | null>(null);
   const [menuOpenBoardId, setMenuOpenBoardId] = useState<string | null>(null);
+  const [infoBoardId, setInfoBoardId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -241,6 +242,12 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                           </button>
                         )}
                         <button
+                          onClick={() => { setInfoBoardId(board.id); setMenuOpenBoardId(null); }}
+                          className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
+                        >
+                          情報
+                        </button>
+                        <button
                           onClick={() => { deleteBoard(board.id); setMenuOpenBoardId(null); }}
                           className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-gray-50 transition"
                         >
@@ -336,6 +343,56 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
           </div>
         </div>
       )}
+      {/* ボード情報モーダル */}
+      {infoBoardId && (() => {
+        const board = boards.find((b) => b.id === infoBoardId);
+        if (!board) return null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => setInfoBoardId(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-base font-semibold text-gray-900 mb-5">ボード情報</h2>
+              <dl className="space-y-3 text-sm">
+                <div>
+                  <dt className="text-xs font-medium text-gray-400 uppercase tracking-wider">タイトル</dt>
+                  <dd className="text-gray-900 mt-0.5">{board.title}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-gray-400 uppercase tracking-wider">作成者</dt>
+                  <dd className="text-gray-900 mt-0.5">{board.createdByName || '-'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-gray-400 uppercase tracking-wider">作成者ID</dt>
+                  <dd className="text-gray-500 mt-0.5 text-xs font-mono break-all">{board.createdBy}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-gray-400 uppercase tracking-wider">作成日</dt>
+                  <dd className="text-gray-900 mt-0.5">{new Date(board.createdAt).toLocaleString('ja-JP')}</dd>
+                </div>
+                {board.groupId && (
+                  <div>
+                    <dt className="text-xs font-medium text-gray-400 uppercase tracking-wider">グループ</dt>
+                    <dd className="text-gray-900 mt-0.5">{groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}</dd>
+                  </div>
+                )}
+              </dl>
+              <div className="flex justify-end pt-5">
+                <button
+                  onClick={() => setInfoBoardId(null)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
