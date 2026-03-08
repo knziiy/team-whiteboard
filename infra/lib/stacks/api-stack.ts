@@ -97,6 +97,13 @@ export class ApiStack extends cdk.Stack {
       },
     });
 
+    // HTTP API のデフォルトステージにスロットリングを設定
+    const httpStage = httpApi.defaultStage!.node.defaultChild as cdk.aws_apigatewayv2.CfnStage;
+    httpStage.defaultRouteSettings = {
+      throttlingBurstLimit: 50,
+      throttlingRateLimit: 100,
+    };
+
     const restIntegration = new apigwv2int.HttpLambdaIntegration('RestIntegration', restFn);
     httpApi.addRoutes({
       path: '/{proxy+}',
@@ -156,6 +163,13 @@ export class ApiStack extends cdk.Stack {
       stageName: 'ws',
       autoDeploy: true,
     });
+
+    // WebSocket API ステージにスロットリングを設定
+    const wsStageCfn = wsStage.node.defaultChild as cdk.aws_apigatewayv2.CfnStage;
+    wsStageCfn.defaultRouteSettings = {
+      throttlingBurstLimit: 50,
+      throttlingRateLimit: 100,
+    };
 
     // Management API 権限
     // ARN は stage/method/@connections/* の形式が正しい（/POST/ が必要）

@@ -5,7 +5,7 @@ type WsConnectEvent = APIGatewayProxyWebsocketEventV2 & {
   queryStringParameters?: Record<string, string>;
 };
 import { verifyToken } from './lib/auth.js';
-import { putConnection, getBoard } from './lib/dynamo.js';
+import { putConnection, getBoard, getGroupMember } from './lib/dynamo.js';
 
 export const handler: APIGatewayProxyWebsocketHandlerV2 = async (rawEvent) => {
   const event = rawEvent as WsConnectEvent;
@@ -27,10 +27,19 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (rawEvent) => {
     return { statusCode: 401, body: 'Unauthorized' };
   }
 
-  // ボード存在確認
+  // ボード存在確認 + アクセス権チェック
   const board = await getBoard(boardId);
   if (!board) {
     return { statusCode: 403, body: 'Board not found' };
+  }
+  if (!user.isAdmin && board.createdBy !== user.id) {
+    if (!board.groupId) {
+      return { statusCode: 403, body: 'Forbidden' };
+    }
+    const isMember = await getGroupMember(board.groupId, user.id);
+    if (!isMember) {
+      return { statusCode: 403, body: 'Forbidden' };
+    }
   }
 
   // 接続を登録

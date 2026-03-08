@@ -202,7 +202,7 @@ export async function deleteBoard(boardId: string): Promise<void> {
 export async function scanBoards(): Promise<BoardItem[]> {
   // 小規模を想定。大規模になったら GSI + Query に変更
   const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
-  const res = await ddb.send(new ScanCommand({ TableName: T.boards }));
+  const res = await ddb.send(new ScanCommand({ TableName: T.boards, Limit: 1000 }));
   return (res.Items ?? []) as BoardItem[];
 }
 
@@ -229,7 +229,7 @@ export async function upsertUser(item: UserItem): Promise<void> {
 
 export async function scanUsers(): Promise<UserItem[]> {
   const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
-  const res = await ddb.send(new ScanCommand({ TableName: T.users }));
+  const res = await ddb.send(new ScanCommand({ TableName: T.users, Limit: 1000 }));
   return (res.Items ?? []) as UserItem[];
 }
 
@@ -261,7 +261,7 @@ export async function deleteGroup(groupId: string): Promise<void> {
 
 export async function scanGroups(): Promise<GroupItem[]> {
   const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
-  const res = await ddb.send(new ScanCommand({ TableName: T.groups }));
+  const res = await ddb.send(new ScanCommand({ TableName: T.groups, Limit: 1000 }));
   return (res.Items ?? []) as GroupItem[];
 }
 

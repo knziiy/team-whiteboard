@@ -14,9 +14,14 @@ const env = {
 };
 
 // CloudFront secret - must match the value configured in CloudFront custom header
-// To rotate: update this value AND redeploy both WhiteboardApi and WhiteboardFrontend together
-const cfSecret =
-  process.env['CLOUDFRONT_SECRET'] ?? '7d83e96a2c21b854b996faa20f648a71e8db9955a12c0c5e72b2db834aabc96a';
+// Generate with: export CLOUDFRONT_SECRET=$(openssl rand -hex 32)
+const cfSecret = process.env['CLOUDFRONT_SECRET'];
+if (!cfSecret) {
+  throw new Error(
+    'CLOUDFRONT_SECRET environment variable is required.\n' +
+    'Generate with: export CLOUDFRONT_SECRET=$(openssl rand -hex 32)',
+  );
+}
 
 // デプロイ順序: Auth → Data → Api → Frontend
 

@@ -2,6 +2,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type { AuthUser } from './types.js';
 
 const userPoolId = process.env['COGNITO_USER_POOL_ID'];
+const clientId = process.env['COGNITO_CLIENT_ID'];
 const localAuth = process.env['LOCAL_AUTH'] === 'true';
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
@@ -18,8 +19,8 @@ if (userPoolId) {
  * LOCAL_AUTH=true の場合は "local.<base64json>" 形式のトークンを受け入れる。
  */
 export async function verifyToken(token: string): Promise<AuthUser> {
-  // ローカル開発モード
-  if (localAuth || !jwks) {
+  // ローカル開発モード（COGNITO_USER_POOL_ID が設定されている場合は LOCAL_AUTH を無視）
+  if (!jwks) {
     if (!token.startsWith('local.')) {
       throw new Error('AUTH_REQUIRED');
     }
@@ -34,7 +35,10 @@ export async function verifyToken(token: string): Promise<AuthUser> {
   }
 
   // Cognito JWT 検証
-  const { payload } = await jwtVerify(token, jwks, { issuer });
+  const { payload } = await jwtVerify(token, jwks, {
+    issuer,
+    ...(clientId ? { audience: clientId } : {}),
+  });
 
   const sub = payload['sub'] as string;
   const email = (payload['email'] as string) ?? '';

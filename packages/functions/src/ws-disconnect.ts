@@ -21,7 +21,10 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
   await deleteConnection(connectionId);
 
   // 同一ユーザーの残接続がなければ user_left をブロードキャスト
-  const remaining = await getConnectionsByBoard(boardId);
+  // GSI は結果整合性のため、削除した接続がまだ残っている可能性がある → フィルタで除外
+  const remaining = (await getConnectionsByBoard(boardId)).filter(
+    (c) => c.connectionId !== connectionId,
+  );
   const stillPresent = remaining.some((c) => c.userId === userId);
   if (!stillPresent) {
     await broadcast(boardId, { type: 'user_left', userId });

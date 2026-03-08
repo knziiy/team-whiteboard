@@ -1,5 +1,5 @@
 import type { APIGatewayProxyWebsocketHandlerV2 } from 'aws-lambda';
-import type { ClientMessage } from '@whiteboard/shared';
+import type { ClientMessage, ElementType } from '@whiteboard/shared';
 import {
   getConnection,
   getConnectionsByBoard,
@@ -33,6 +33,16 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     case 'element_add':
     case 'element_update': {
       const el = message.element;
+      // 要素の type バリデーション
+      const validTypes: ElementType[] = ['sticky', 'rect', 'circle', 'arrow', 'freehand'];
+      if (!el.type || !validTypes.includes(el.type)) {
+        return { statusCode: 400, body: 'Invalid element type' };
+      }
+      // props のサイズ制限（巨大データの送信防止）
+      const propsStr = JSON.stringify(el.props ?? {});
+      if (propsStr.length > 50000) {
+        return { statusCode: 400, body: 'Element props too large' };
+      }
       // createdBy は JWT 由来の userId で上書き（なりすまし防止）
       // boardId もサーバー側の値で上書き（boardId インジェクション防止）
       const toSave = { ...el, createdBy: userId, boardId };

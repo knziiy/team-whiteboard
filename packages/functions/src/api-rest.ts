@@ -183,12 +183,24 @@ async function handleCreateBoard(user: AuthUser, body: Record<string, unknown>) 
   const title = body['title'] as string | undefined;
   if (!title?.trim()) throw new HttpError(400, 'title is required');
 
+  const groupId = body['groupId'] as string | undefined;
+
+  // groupId が指定された場合、グループの存在確認とメンバーシップ検証
+  if (groupId) {
+    const group = await getGroup(groupId);
+    if (!group) throw new HttpError(400, 'Group not found');
+    if (!user.isAdmin) {
+      const isMember = await getGroupMember(groupId, user.id);
+      if (!isMember) throw new HttpError(403, 'Not a member of the specified group');
+    }
+  }
+
   const boardId = uuidv4();
   const now = new Date().toISOString();
   const item = {
     boardId,
     title: title.trim(),
-    ...(body['groupId'] ? { groupId: body['groupId'] as string } : {}),
+    ...(groupId ? { groupId } : {}),
     createdBy: user.id,
     createdAt: now,
     updatedAt: now,
