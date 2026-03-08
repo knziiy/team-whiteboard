@@ -38,6 +38,7 @@ export default function Board({ boardId, user, onBack }: Props) {
   const removeElement = useBoardStore((s) => s.removeElement);
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
+  const setDrawingElementId = useBoardStore((s) => s.setDrawingElementId);
 
   const lockedElements = useBoardStore((s) => s.lockedElements);
 
@@ -49,6 +50,7 @@ export default function Board({ boardId, user, onBack }: Props) {
   const isDrawing = useRef(false);
   const drawingId = useRef<string | null>(null);
   const lastCursorSend = useRef(0);
+  const lastFreehandSend = useRef(0);
   const stageContainerRef = useRef<HTMLDivElement>(null);
   const clipboardEl = useRef<BoardElement | null>(null);
   const pasteCount = useRef(0);
@@ -265,6 +267,7 @@ export default function Board({ boardId, user, onBack }: Props) {
 
       if (activeTool === 'freehand') {
         isDrawing.current = true;
+        setDrawingElementId(id);
         const el: BoardElement = {
           id,
           boardId,
@@ -314,7 +317,11 @@ export default function Board({ boardId, user, onBack }: Props) {
       const updated: BoardElement = { ...el, props: newProps, updatedAt: new Date().toISOString() };
       upsertElement(updated, false); // don't pollute undo stack while drawing
 
-      if (now % 100 < 30) send({ type: 'element_update', element: updated });
+      // 50ms間隔で他クライアントに中間更新を送信
+      if (now - lastFreehandSend.current > 50) {
+        lastFreehandSend.current = now;
+        send({ type: 'element_update', element: updated });
+      }
     },
     [send, upsertElement, toCanvas],
   );
@@ -325,10 +332,11 @@ export default function Board({ boardId, user, onBack }: Props) {
     if (isDrawing.current && drawingId.current) {
       const el = useBoardStore.getState().elements.get(drawingId.current);
       if (el) send({ type: 'element_update', element: el });
+      setDrawingElementId(null);
     }
     isDrawing.current = false;
     drawingId.current = null;
-  }, [send]);
+  }, [send, setDrawingElementId]);
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────────
   useEffect(() => {

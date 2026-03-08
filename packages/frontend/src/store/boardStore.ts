@@ -27,12 +27,14 @@ interface BoardState {
   onlineUsers: OnlineUser[];
   cursors: Map<string, CursorPosition>;
   lockedElements: Map<string, LockInfo>;
+  drawingElementId: string | null;
   selectedElementId: string | null;
   activeTool: 'select' | 'sticky' | 'rect' | 'circle' | 'arrow' | 'freehand';
   activeColor: string;
   undoStack: UndoPatch[];
   redoStack: UndoPatch[];
 
+  setDrawingElementId: (id: string | null) => void;
   setElements: (elements: BoardElement[]) => void;
   upsertElement: (element: BoardElement, saveHistory?: boolean) => void;
   removeElement: (id: string, saveHistory?: boolean) => void;
@@ -49,11 +51,14 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   onlineUsers: [],
   cursors: new Map(),
   lockedElements: new Map(),
+  drawingElementId: null,
   selectedElementId: null,
   activeTool: 'select',
   activeColor: '#ffffff',
   undoStack: [],
   redoStack: [],
+
+  setDrawingElementId: (id) => set({ drawingElementId: id }),
 
   setElements: (elements) =>
     set({ elements: new Map(elements.map((el) => [el.id, el])), lockedElements: new Map(), undoStack: [], redoStack: [] }),
@@ -154,6 +159,8 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       case 'element_add':
       case 'element_update':
         set((state) => {
+          // 自分が描画中の要素はサーバーエコーで上書きしない（ポイント消失防止）
+          if (state.drawingElementId === message.element.id) return state;
           const next = new Map(state.elements);
           next.set(message.element.id, message.element);
           return { elements: next };
