@@ -50,6 +50,8 @@ interface AuthContextValue {
   logout: () => void;
   register?: (email: string, password: string, displayName: string, company?: string) => Promise<void>;
   confirm?: (email: string, code: string) => Promise<void>;
+  completeNewPassword?: (newPassword: string) => Promise<AuthUser>;
+  newPasswordRequired: boolean;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
@@ -57,6 +59,7 @@ export const AuthContext = createContext<AuthContextValue>({
   loading: true,
   login: () => {},
   logout: () => {},
+  newPasswordRequired: false,
 });
 
 export function useAuth(): AuthContextValue {
@@ -68,6 +71,8 @@ export function useAuth(): AuthContextValue {
 export function useAuthProvider(): AuthContextValue {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [newPasswordRequired, setNewPasswordRequired] = useState(false);
+  const [pendingCognitoUser, setPendingCognitoUser] = useState<any>(null);
 
   useEffect(() => {
     if (LOCAL_MODE) {
@@ -113,7 +118,8 @@ export function useAuthProvider(): AuthContextValue {
     const { CognitoUser, AuthenticationDetails } = await import('amazon-cognito-identity-js');
     const pool = await createPool();
     return new Promise((resolve, reject) => {
-      new CognitoUser({ Username: email, Pool: pool }).authenticateUser(
+      const cognitoUser = new CognitoUser({ Username: email, Pool: pool });
+      cognitoUser.authenticateUser(
         new AuthenticationDetails({ Username: email, Password: password }),
         {
           onSuccess: (session) => {
@@ -124,11 +130,34 @@ export function useAuthProvider(): AuthContextValue {
             resolve(u);
           },
           onFailure: reject,
-          newPasswordRequired: () => reject(new Error('New password required. Please contact admin.')),
+          newPasswordRequired: () => {
+            setPendingCognitoUser(cognitoUser);
+            setNewPasswordRequired(true);
+            reject(new Error('NEW_PASSWORD_REQUIRED'));
+          },
         },
       );
     });
   }, []);
+
+  const completeNewPassword = useCallback(async (newPassword: string): Promise<AuthUser> => {
+    if (!pendingCognitoUser) throw new Error('No pending password challenge');
+    return new Promise((resolve, reject) => {
+      pendingCognitoUser.completeNewPasswordChallenge(newPassword, {}, {
+        onSuccess: (session: any) => {
+          const u = parseCognitoSession(session);
+          setUser(u);
+          setNewPasswordRequired(false);
+          setPendingCognitoUser(null);
+          api.users.upsertMe(u.idToken).catch(() => {});
+          resolve(u);
+        },
+        onFailure: (err: Error) => {
+          reject(err);
+        },
+      });
+    });
+  }, [pendingCognitoUser]);
 
   const cognitoRegister = useCallback(async (email: string, password: string, displayName: string, company?: string): Promise<void> => {
     const { CognitoUserAttribute } = await import('amazon-cognito-identity-js');
@@ -161,7 +190,7 @@ export function useAuthProvider(): AuthContextValue {
   }, []);
 
   if (LOCAL_MODE) {
-    return { user, loading, login: localLogin, logout: localLogout };
+    return { user, loading, login: localLogin, logout: localLogout, newPasswordRequired: false };
   }
 
   return {
@@ -170,6 +199,8 @@ export function useAuthProvider(): AuthContextValue {
     logout: cognitoLogout,
     register: cognitoRegister,
     confirm: cognitoConfirm,
+    completeNewPassword,
+    newPasswordRequired,
   };
 }
 
