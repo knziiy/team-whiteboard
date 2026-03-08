@@ -160,33 +160,40 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                 key={board.id}
                 className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-shadow"
               >
-                <button
-                  onClick={() => onSelectBoard(board.id)}
-                  className="w-full text-left p-4"
-                >
-                  {editingBoardId === board.id ? (
+                {editingBoardId === board.id ? (
+                  <div className="w-full text-left p-4">
                     <input
                       type="text"
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
                       onBlur={() => renameBoard(board.id)}
                       onKeyDown={(e) => {
+                        if (e.nativeEvent.isComposing) return;
                         if (e.key === 'Enter') renameBoard(board.id);
                         if (e.key === 'Escape') setEditingBoardId(null);
                       }}
-                      onClick={(e) => e.stopPropagation()}
                       autoFocus
                       className="w-full font-medium text-gray-900 border border-blue-400 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  ) : (
+                    {board.groupId && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onSelectBoard(board.id)}
+                    className="w-full text-left p-4"
+                  >
                     <h3 className="font-medium text-gray-900">{board.title}</h3>
-                  )}
-                  {board.groupId && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      {groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}
-                    </p>
-                  )}
-                </button>
+                    {board.groupId && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}
+                      </p>
+                    )}
+                  </button>
+                )}
                 {(user.isAdmin || board.createdBy === user.id) && (
                   <div className="border-t px-4 py-2 flex flex-col gap-2">
                     <div className="flex gap-3">
