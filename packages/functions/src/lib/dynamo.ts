@@ -142,6 +142,92 @@ export async function deleteAllElementsForBoard(
   }
 }
 
+/** ロック取得（条件付き書き込み: lockedBy が未設定 or 自分の場合のみ成功） */
+export async function lockElement(
+  boardId: string,
+  elementId: string,
+  userId: string,
+): Promise<boolean> {
+  try {
+    await ddb.send(
+      new UpdateCommand({
+        TableName: T.elements,
+        Key: { boardId, elementId },
+        UpdateExpression: 'SET lockedBy = :u',
+        ConditionExpression: 'attribute_exists(boardId) AND (attribute_not_exists(lockedBy) OR lockedBy = :u)',
+        ExpressionAttributeValues: { ':u': userId },
+      }),
+    );
+    return true;
+  } catch (err: any) {
+    if (err.name === 'ConditionalCheckFailedException') return false;
+    throw err;
+  }
+}
+
+/** ロック解除 */
+export async function unlockElement(
+  boardId: string,
+  elementId: string,
+  userId: string,
+): Promise<void> {
+  try {
+    await ddb.send(
+      new UpdateCommand({
+        TableName: T.elements,
+        Key: { boardId, elementId },
+        UpdateExpression: 'REMOVE lockedBy',
+        ConditionExpression: 'lockedBy = :u',
+        ExpressionAttributeValues: { ':u': userId },
+      }),
+    );
+  } catch (err: any) {
+    if (err.name === 'ConditionalCheckFailedException') return;
+    throw err;
+  }
+}
+
+/** 指定ユーザーの全ロックを解除（切断時用） */
+export async function unlockAllByUser(
+  boardId: string,
+  userId: string,
+): Promise<string[]> {
+  const res = await ddb.send(
+    new QueryCommand({
+      TableName: T.elements,
+      KeyConditionExpression: 'boardId = :b',
+      FilterExpression: 'lockedBy = :u',
+      ExpressionAttributeValues: { ':b': boardId, ':u': userId },
+    }),
+  );
+  const unlockedIds: string[] = [];
+  for (const item of res.Items ?? []) {
+    const elementId = item['elementId'] as string;
+    await unlockElement(boardId, elementId, userId);
+    unlockedIds.push(elementId);
+  }
+  return unlockedIds;
+}
+
+/** ボード内の全ロック情報を取得 */
+export async function getLockedElements(
+  boardId: string,
+): Promise<{ elementId: string; lockedBy: string }[]> {
+  const res = await ddb.send(
+    new QueryCommand({
+      TableName: T.elements,
+      KeyConditionExpression: 'boardId = :b',
+      FilterExpression: 'attribute_exists(lockedBy)',
+      ExpressionAttributeValues: { ':b': boardId },
+      ProjectionExpression: 'elementId, lockedBy',
+    }),
+  );
+  return (res.Items ?? []).map((i) => ({
+    elementId: i['elementId'] as string,
+    lockedBy: i['lockedBy'] as string,
+  }));
+}
+
 function itemToElement(item: Record<string, unknown>): BoardElement {
   return {
     id: item['elementId'] as string,

@@ -8,6 +8,8 @@ interface Props {
   props: StickyProps;
   isSelected: boolean;
   isEditing: boolean;
+  isLockedByOther: boolean;
+  lockedByName?: string;
   onSelect: () => void;
   onDblClick: () => void;
   onChange: (props: StickyProps) => void;
@@ -17,7 +19,7 @@ const MIN_W = 80;
 const MIN_H = 36;
 const HANDLE_R = 6;
 
-export default function StickyNote({ props, isSelected, isEditing, onSelect, onDblClick, onChange }: Props) {
+export default function StickyNote({ props, isSelected, isEditing, isLockedByOther, lockedByName, onSelect, onDblClick, onChange }: Props) {
   const w = props.width ?? 160;
   const h = props.height ?? 120;
 
@@ -85,18 +87,30 @@ export default function StickyNote({ props, isSelected, isEditing, onSelect, onD
         shadowBlur={isSelected ? 0 : 3}
         shadowColor="rgba(0,0,0,0.15)"
         cornerRadius={4}
-        stroke={isSelected ? '#3B82F6' : '#d1d5db'}
-        strokeWidth={isSelected ? 2 : 1}
+        stroke={isLockedByOther ? '#EF4444' : isSelected ? '#3B82F6' : '#d1d5db'}
+        strokeWidth={isLockedByOther ? 2 : isSelected ? 2 : 1}
+        dash={isLockedByOther ? [6, 3] : undefined}
       />
       {!isEditing && (
         <Text
-          text={props.text || (isSelected ? 'ダブルクリックで編集' : '')}
+          text={props.text || (isSelected && !isLockedByOther ? 'ダブルクリックで編集' : '')}
           width={displayW}
           height={displayH}
           padding={8}
           fontSize={props.fontSize ?? 14}
           fill={props.text ? (props.textColor ?? '#1a1a1a') : '#9ca3af'}
           wrap="word"
+          listening={false}
+        />
+      )}
+      {isLockedByOther && (
+        <Text
+          text={`🔒 ${lockedByName ?? ''}が編集中`}
+          x={4}
+          y={displayH - 18}
+          width={displayW - 8}
+          fontSize={11}
+          fill="#EF4444"
           listening={false}
         />
       )}

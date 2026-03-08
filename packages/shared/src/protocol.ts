@@ -22,6 +22,16 @@ export interface ClientCursorMove {
   y: number;
 }
 
+export interface ClientElementLock {
+  type: 'element_lock';
+  elementId: string;
+}
+
+export interface ClientElementUnlock {
+  type: 'element_unlock';
+  elementId: string;
+}
+
 export interface ClientPing {
   type: 'ping';
 }
@@ -34,15 +44,24 @@ export type ClientMessage =
   | ClientElementAdd
   | ClientElementUpdate
   | ClientElementDelete
+  | ClientElementLock
+  | ClientElementUnlock
   | ClientCursorMove
   | ClientPing
   | ClientRequestInit;
 
 // Server → Client messages
+export interface LockedElementInfo {
+  elementId: string;
+  userId: string;
+  displayName: string;
+}
+
 export interface ServerInit {
   type: 'init';
   elements: BoardElement[];
   onlineUsers: OnlineUser[];
+  lockedElements?: LockedElementInfo[];
 }
 
 export interface ServerElementAdd {
@@ -77,6 +96,18 @@ export interface ServerUserLeft {
   userId: string;
 }
 
+export interface ServerElementLocked {
+  type: 'element_locked';
+  elementId: string;
+  userId: string;
+  displayName: string;
+}
+
+export interface ServerElementUnlocked {
+  type: 'element_unlocked';
+  elementId: string;
+}
+
 export interface ServerError {
   type: 'error';
   message: string;
@@ -92,6 +123,8 @@ export type ServerMessage =
   | ServerElementAdd
   | ServerElementUpdate
   | ServerElementDelete
+  | ServerElementLocked
+  | ServerElementUnlocked
   | ServerCursorMove
   | ServerUserJoined
   | ServerUserLeft

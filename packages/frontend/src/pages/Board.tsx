@@ -39,6 +39,8 @@ export default function Board({ boardId, user, onBack }: Props) {
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
 
+  const lockedElements = useBoardStore((s) => s.lockedElements);
+
   const { send } = useWebSocket(boardId, user.idToken);
 
   // ID of the sticky note currently being text-edited
@@ -122,13 +124,35 @@ export default function Board({ boardId, user, onBack }: Props) {
     [upsertElement, send, user.id],
   );
 
-  // ── Sticky text editing ──────────────────────────────────────────────────────
+  // ── Sticky text editing with lock ───────────────────────────────────────────
+  const pendingLockId = useRef<string | null>(null);
+
   const startEditing = useCallback((id: string) => {
-    setEditingId(id);
+    // 他のユーザーがロック中なら編集不可
+    const lock = useBoardStore.getState().lockedElements.get(id);
+    if (lock && lock.userId !== user.id) return;
+
+    // ロックリクエストを送信し、サーバーからの応答を待つ
+    pendingLockId.current = id;
+    send({ type: 'element_lock', elementId: id });
     setSelectedElement(id);
-    // Focus textarea after render
-    setTimeout(() => textareaRef.current?.focus(), 0);
-  }, [setSelectedElement]);
+    // ロック失敗時のタイムアウト（2秒以内に応答がなければクリア）
+    setTimeout(() => {
+      if (pendingLockId.current === id) pendingLockId.current = null;
+    }, 2000);
+  }, [setSelectedElement, send, user.id]);
+
+  // サーバーからロック成功通知が来たら編集モードに入る
+  useEffect(() => {
+    if (!pendingLockId.current) return;
+    const lock = lockedElements.get(pendingLockId.current);
+    if (lock && lock.userId === user.id) {
+      const id = pendingLockId.current;
+      pendingLockId.current = null;
+      setEditingId(id);
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    }
+  }, [lockedElements, user.id]);
 
   const commitEdit = useCallback(() => {
     if (!editingId || !textareaRef.current) return;
@@ -141,8 +165,10 @@ export default function Board({ boardId, user, onBack }: Props) {
       };
       sendElement(updated);
     }
+    // アンロック送信
+    send({ type: 'element_unlock', elementId: editingId });
     setEditingId(null);
-  }, [editingId, sendElement]);
+  }, [editingId, sendElement, send]);
 
   // ── Stage events ─────────────────────────────────────────────────────────────
   const handleStageMouseDown = useCallback(
@@ -522,6 +548,8 @@ export default function Board({ boardId, user, onBack }: Props) {
                 const onSelect = () => { if (!editingId) setSelectedElement(el.id); };
 
                 if (el.type === 'sticky') {
+                  const lock = lockedElements.get(el.id);
+                  const isLockedByOther = !!lock && lock.userId !== user.id;
                   return (
                     <StickyNote
                       key={el.id}
@@ -529,8 +557,13 @@ export default function Board({ boardId, user, onBack }: Props) {
                       props={el.props as StickyProps}
                       isSelected={isSelected}
                       isEditing={el.id === editingId}
+                      isLockedByOther={isLockedByOther}
+                      lockedByName={isLockedByOther ? lock.displayName : undefined}
                       onSelect={onSelect}
-                      onDblClick={() => startEditing(el.id)}
+                      onDblClick={() => {
+                        if (isLockedByOther) return;
+                        startEditing(el.id);
+                      }}
                       onChange={(p) => updateElement(el, p)}
                     />
                   );

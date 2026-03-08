@@ -6,6 +6,9 @@ import {
   getElementsByBoard,
   upsertElement,
   deleteElement,
+  lockElement,
+  unlockElement,
+  getLockedElements,
 } from './lib/dynamo.js';
 import { sendToConnection, broadcast, broadcastCursor } from './lib/apigw.js';
 
@@ -71,6 +74,33 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
       break;
     }
 
+    case 'element_lock': {
+      const locked = await lockElement(boardId, message.elementId, userId);
+      if (locked) {
+        await broadcast(boardId, {
+          type: 'element_locked',
+          elementId: message.elementId,
+          userId,
+          displayName: conn.displayName,
+        });
+      } else {
+        await sendToConnection(connectionId, {
+          type: 'error',
+          message: `element_lock_failed:${message.elementId}`,
+        });
+      }
+      break;
+    }
+
+    case 'element_unlock': {
+      await unlockElement(boardId, message.elementId, userId);
+      await broadcast(boardId, {
+        type: 'element_unlocked',
+        elementId: message.elementId,
+      });
+      break;
+    }
+
     case 'request_init': {
       // $connect 完了後にクライアントから送信される初期化リクエスト
       const existingConns = await getConnectionsByBoard(boardId);
@@ -81,8 +111,19 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
         }
       }
       const onlineUsers = Array.from(seen.values());
-      const elements = await getElementsByBoard(boardId);
-      await sendToConnection(connectionId, { type: 'init', elements, onlineUsers });
+      const [elements, locks] = await Promise.all([
+        getElementsByBoard(boardId),
+        getLockedElements(boardId),
+      ]);
+
+      // ロック情報を displayName 付きで送信
+      const lockedElements = locks.map((l) => ({
+        elementId: l.elementId,
+        userId: l.lockedBy,
+        displayName: seen.get(l.lockedBy)?.displayName ?? '',
+      }));
+
+      await sendToConnection(connectionId, { type: 'init', elements, onlineUsers, lockedElements });
 
       // 同一ユーザーの初回接続のみ user_joined をブロードキャスト
       const sameUserConns = existingConns.filter(

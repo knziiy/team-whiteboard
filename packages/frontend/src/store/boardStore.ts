@@ -17,10 +17,16 @@ export type UndoResult =
   | { type: 'delete'; id: string }
   | { type: 'restore'; element: BoardElement };
 
+interface LockInfo {
+  userId: string;
+  displayName: string;
+}
+
 interface BoardState {
   elements: Map<string, BoardElement>;
   onlineUsers: OnlineUser[];
   cursors: Map<string, CursorPosition>;
+  lockedElements: Map<string, LockInfo>;
   selectedElementId: string | null;
   activeTool: 'select' | 'sticky' | 'rect' | 'circle' | 'arrow' | 'freehand';
   activeColor: string;
@@ -42,6 +48,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   elements: new Map(),
   onlineUsers: [],
   cursors: new Map(),
+  lockedElements: new Map(),
   selectedElementId: null,
   activeTool: 'select',
   activeColor: '#ffffff',
@@ -49,7 +56,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   redoStack: [],
 
   setElements: (elements) =>
-    set({ elements: new Map(elements.map((el) => [el.id, el])), undoStack: [], redoStack: [] }),
+    set({ elements: new Map(elements.map((el) => [el.id, el])), lockedElements: new Map(), undoStack: [], redoStack: [] }),
 
   upsertElement: (element, saveHistory = true) =>
     set((state) => {
@@ -130,14 +137,20 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   // Server messages NEVER touch undoStack — only local operations do
   handleServerMessage: (message) => {
     switch (message.type) {
-      case 'init':
+      case 'init': {
+        const locks = new Map<string, LockInfo>();
+        for (const l of message.lockedElements ?? []) {
+          locks.set(l.elementId, { userId: l.userId, displayName: l.displayName });
+        }
         set({
           elements: new Map(message.elements.map((el) => [el.id, el])),
           onlineUsers: message.onlineUsers,
+          lockedElements: locks,
           undoStack: [],
           redoStack: [],
         });
         break;
+      }
       case 'element_add':
       case 'element_update':
         set((state) => {
@@ -158,6 +171,20 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           const next = new Map(state.cursors);
           next.set(message.userId, { userId: message.userId, x: message.x, y: message.y });
           return { cursors: next };
+        });
+        break;
+      case 'element_locked':
+        set((state) => {
+          const next = new Map(state.lockedElements);
+          next.set(message.elementId, { userId: message.userId, displayName: message.displayName });
+          return { lockedElements: next };
+        });
+        break;
+      case 'element_unlocked':
+        set((state) => {
+          const next = new Map(state.lockedElements);
+          next.delete(message.elementId);
+          return { lockedElements: next };
         });
         break;
       case 'user_joined':
