@@ -47,6 +47,7 @@ export default function Admin({ user, onBack }: Props) {
   };
 
   const deleteGroup = async (id: string) => {
+    if (!window.confirm('このグループを削除しますか？')) return;
     try {
       await api.groups.delete(id, user.idToken);
       setGroups((prev) => prev.filter((g) => g.id !== id));

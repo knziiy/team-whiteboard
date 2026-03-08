@@ -101,6 +101,7 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
   };
 
   const deleteBoard = async (id: string) => {
+    if (!window.confirm('このボードを削除しますか？')) return;
     try {
       await api.boards.delete(id, user.idToken);
       setBoards((prev) => prev.filter((b) => b.id !== id));
