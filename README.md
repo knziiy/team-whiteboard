@@ -91,11 +91,7 @@ cp packages/frontend/.env.example packages/frontend/.env
 VITE_AUTH_MODE=local   # Cognito を使わずローカルトークンで認証
 ```
 
-Cognito を使う場合は追加:
-```env
-VITE_COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
-VITE_COGNITO_CLIENT_ID=XXXXXXXXXXXXXXXXXXXXXXXXXX
-```
+> **Note**: 本番環境の Cognito 設定（UserPoolId / ClientId）は CDK が `/config.json` として S3 に自動デプロイするため、`VITE_COGNITO_*` 環境変数は不要です。
 
 ### 3. DynamoDB Local 起動（初回・Docker 再起動後）
 
@@ -174,13 +170,11 @@ Whiteboard-Dev-Api.WsApiEndpoint       = wss://xxxxxxxxxx.execute-api.us-east-1.
 Whiteboard-Dev-Frontend.CloudFrontUrl  = https://xxxxxxxxxxxx.cloudfront.net
 ```
 
-### 3. フロントエンド環境変数を更新して再デプロイ
+### Cognito 設定の自動注入
 
-CDK 出力の Cognito 値を `packages/frontend/.env.production` に設定後:
-```bash
-npm run build --workspace=packages/frontend
-cd infra && npx cdk deploy Whiteboard-Dev-Frontend -c env=dev
-```
+フロントエンドの Cognito 設定（UserPoolId / ClientId）は CDK デプロイ時に `/config.json` として S3 に自動配置されます。`VITE_COGNITO_*` 環境変数の手動設定は不要です。
+
+フロントエンドはランタイムで `/config.json` を読み込むため、Cognito の値が変わっても **フロントエンドの再ビルドは不要** です。
 
 ---
 

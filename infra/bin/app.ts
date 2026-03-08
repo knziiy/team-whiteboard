@@ -43,6 +43,7 @@ const frontendStack = new FrontendStack(app, `Whiteboard-${envSuffix}-Frontend`,
   env,
   envName,
   api: apiStack,
+  auth: authStack,
   cfSecret: dataStack.cfSecret,
 });
 frontendStack.addDependency(apiStack);

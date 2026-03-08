@@ -7,10 +7,12 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import type { ApiStack } from './api-stack';
+import type { AuthStack } from './auth-stack';
 
 interface FrontendStackProps extends cdk.StackProps {
   envName: string;
   api: ApiStack;
+  auth: AuthStack;
   cfSecret: secretsmanager.ISecret;
 }
 
@@ -20,7 +22,7 @@ export class FrontendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: FrontendStackProps) {
     super(scope, id, props);
 
-    const { api, cfSecret } = props;
+    const { api, auth, cfSecret } = props;
 
     // S3 bucket for SPA
     const bucket = new s3.Bucket(this, 'FrontendBucket', {
@@ -105,6 +107,20 @@ export class FrontendStack extends cdk.Stack {
       destinationBucket: bucket,
       distribution: this.distribution,
       distributionPaths: ['/*'],
+    });
+
+    // Runtime config: Cognito の値をフロントエンドに自動注入
+    // フロントエンドは /config.json を fetch して UserPoolId / ClientId を取得する
+    new s3deploy.BucketDeployment(this, 'DeployConfig', {
+      sources: [
+        s3deploy.Source.jsonData('config.json', {
+          cognitoUserPoolId: auth.userPool.userPoolId,
+          cognitoClientId: auth.userPoolClient.userPoolClientId,
+        }),
+      ],
+      destinationBucket: bucket,
+      // config.json のみデプロイ。既存ファイルを削除しない
+      prune: false,
     });
 
     new cdk.CfnOutput(this, 'CloudFrontUrl', {

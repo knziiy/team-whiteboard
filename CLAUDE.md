@@ -100,6 +100,7 @@ LWW conflict resolution. Optimistic UI with client-generated UUIDs. Cursor throt
 ### Key Patterns
 
 - **Local auth mode**: `VITE_AUTH_MODE=local` in frontend `.env`. Tokens are `local.<base64json>`. Backend checks `LOCAL_AUTH=true` env var to accept these tokens.
+- **Runtime config**: Cognito UserPoolId/ClientId は CDK が `/config.json` として S3 に自動デプロイ。フロントエンドはランタイムで fetch する。`VITE_COGNITO_*` 環境変数は不要。
 - **CloudFront security**: `X-CF-Secret` custom header added by CloudFront, validated by `api-rest.ts`. Skipped when `CLOUDFRONT_SECRET` env var is unset (local dev).
 - **Lambda bundling**: `NodejsFunction` with esbuild. `@aws-sdk/*` externalized (provided by Node.js 22 Lambda runtime).
 - **WebSocket stage name**: `ws` — matches CloudFront `/ws` behavior path without origin path rewrite.

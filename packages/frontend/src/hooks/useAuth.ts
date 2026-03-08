@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { api } from '../api/client';
+import { getRuntimeConfig } from '../lib/runtimeConfig';
 
 export interface AuthUser {
   id: string;
@@ -26,6 +27,18 @@ function readLocalUser(): AuthUser | null {
   } catch {
     return null;
   }
+}
+
+// CognitoUserPool を生成するヘルパー（config.json から値を取得）
+async function createPool() {
+  const [{ CognitoUserPool }, config] = await Promise.all([
+    import('amazon-cognito-identity-js'),
+    getRuntimeConfig(),
+  ]);
+  return new CognitoUserPool({
+    UserPoolId: config.cognitoUserPoolId,
+    ClientId: config.cognitoClientId,
+  });
 }
 
 // ─── Context ───────────────────────────────────────────────────────────────────
@@ -63,17 +76,15 @@ export function useAuthProvider(): AuthContextValue {
       return;
     }
 
-    import('amazon-cognito-identity-js').then(({ CognitoUserPool }) => {
-      const pool = new CognitoUserPool({
-        UserPoolId: import.meta.env['VITE_COGNITO_USER_POOL_ID'] as string,
-        ClientId: import.meta.env['VITE_COGNITO_CLIENT_ID'] as string,
-      });
+    createPool().then((pool) => {
       const cognitoUser = pool.getCurrentUser();
       if (!cognitoUser) { setLoading(false); return; }
       cognitoUser.getSession((err: Error | null, session: any) => {
         if (!err && session?.isValid()) setUser(parseCognitoSession(session));
         setLoading(false);
       });
+    }).catch(() => {
+      setLoading(false);
     });
   }, []);
 
@@ -99,11 +110,8 @@ export function useAuthProvider(): AuthContextValue {
   }, []);
 
   const cognitoLogin = useCallback(async (email: string, password: string): Promise<AuthUser> => {
-    const { CognitoUserPool, CognitoUser, AuthenticationDetails } = await import('amazon-cognito-identity-js');
-    const pool = new CognitoUserPool({
-      UserPoolId: import.meta.env['VITE_COGNITO_USER_POOL_ID'] as string,
-      ClientId: import.meta.env['VITE_COGNITO_CLIENT_ID'] as string,
-    });
+    const { CognitoUser, AuthenticationDetails } = await import('amazon-cognito-identity-js');
+    const pool = await createPool();
     return new Promise((resolve, reject) => {
       new CognitoUser({ Username: email, Pool: pool }).authenticateUser(
         new AuthenticationDetails({ Username: email, Password: password }),
@@ -123,11 +131,8 @@ export function useAuthProvider(): AuthContextValue {
   }, []);
 
   const cognitoRegister = useCallback(async (email: string, password: string, displayName: string, company?: string): Promise<void> => {
-    const { CognitoUserPool, CognitoUserAttribute } = await import('amazon-cognito-identity-js');
-    const pool = new CognitoUserPool({
-      UserPoolId: import.meta.env['VITE_COGNITO_USER_POOL_ID'] as string,
-      ClientId: import.meta.env['VITE_COGNITO_CLIENT_ID'] as string,
-    });
+    const { CognitoUserAttribute } = await import('amazon-cognito-identity-js');
+    const pool = await createPool();
     const attrs = [
       new CognitoUserAttribute({ Name: 'email', Value: email }),
       new CognitoUserAttribute({ Name: 'name', Value: displayName }),
@@ -141,11 +146,8 @@ export function useAuthProvider(): AuthContextValue {
   }, []);
 
   const cognitoConfirm = useCallback(async (email: string, code: string): Promise<void> => {
-    const { CognitoUserPool, CognitoUser } = await import('amazon-cognito-identity-js');
-    const pool = new CognitoUserPool({
-      UserPoolId: import.meta.env['VITE_COGNITO_USER_POOL_ID'] as string,
-      ClientId: import.meta.env['VITE_COGNITO_CLIENT_ID'] as string,
-    });
+    const { CognitoUser } = await import('amazon-cognito-identity-js');
+    const pool = await createPool();
     return new Promise((resolve, reject) => {
       new CognitoUser({ Username: email, Pool: pool }).confirmRegistration(
         code, true, (err) => (err ? reject(err) : resolve()));
@@ -153,11 +155,7 @@ export function useAuthProvider(): AuthContextValue {
   }, []);
 
   const cognitoLogout = useCallback(async () => {
-    const { CognitoUserPool } = await import('amazon-cognito-identity-js');
-    const pool = new CognitoUserPool({
-      UserPoolId: import.meta.env['VITE_COGNITO_USER_POOL_ID'] as string,
-      ClientId: import.meta.env['VITE_COGNITO_CLIENT_ID'] as string,
-    });
+    const pool = await createPool();
     pool.getCurrentUser()?.signOut();
     setUser(null);
   }, []);
