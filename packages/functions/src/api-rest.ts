@@ -11,6 +11,7 @@ import {
   scanBoards,
   deleteAllElementsForBoard,
   getElementsByBoard,
+  upsertElement,
   getUser,
   upsertUser,
   scanUsers,
@@ -92,6 +93,13 @@ async function route(
     if (method === 'GET') return handleGetBoard(user, boardId);
     if (method === 'PATCH') return handleUpdateBoard(user, boardId, parseBody(event.body));
     if (method === 'DELETE') return handleDeleteBoard(user, boardId);
+  }
+
+  // /api/boards/:boardId/duplicate
+  const duplicateMatch = path.match(/^\/api\/boards\/([^/]+)\/duplicate$/);
+  if (duplicateMatch && method === 'POST') {
+    requireAdmin(user);
+    return handleDuplicateBoard(user, duplicateMatch[1]!);
   }
 
   // /api/boards/:boardId/elements
@@ -249,6 +257,36 @@ async function handleDeleteBoard(user: AuthUser, boardId: string) {
   await deleteAllElementsForBoard(boardId);
   await deleteBoard(boardId);
   return respond(204, null);
+}
+
+async function handleDuplicateBoard(user: AuthUser, sourceBoardId: string) {
+  const source = await getBoard(sourceBoardId);
+  if (!source) throw new HttpError(404, 'Not found');
+
+  const newBoardId = uuidv4();
+  const now = new Date().toISOString();
+  const newBoard = {
+    boardId: newBoardId,
+    title: `${source.title}(コピー)`,
+    ...(source.groupId ? { groupId: source.groupId } : {}),
+    createdBy: user.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await putBoard(newBoard);
+
+  // 要素をコピー
+  const elements = await getElementsByBoard(sourceBoardId);
+  for (const el of elements) {
+    await upsertElement({
+      ...el,
+      id: uuidv4(),
+      boardId: newBoardId,
+      updatedAt: now,
+    });
+  }
+
+  return respond(201, boardToApi(newBoard));
 }
 
 async function handleGetElements(user: AuthUser, boardId: string) {

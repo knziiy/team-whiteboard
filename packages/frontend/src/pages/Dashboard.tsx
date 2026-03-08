@@ -78,6 +78,15 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
     }
   };
 
+  const duplicateBoard = async (id: string) => {
+    try {
+      const board = await api.boards.duplicate(id, user.idToken);
+      setBoards((prev) => [board, ...prev]);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   const deleteBoard = async (id: string) => {
     try {
       await api.boards.delete(id, user.idToken);
@@ -195,6 +204,14 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                           className="text-xs text-blue-500 hover:text-blue-700"
                         >
                           グループ変更
+                        </button>
+                      )}
+                      {user.isAdmin && (
+                        <button
+                          onClick={() => duplicateBoard(board.id)}
+                          className="text-xs text-blue-500 hover:text-blue-700"
+                        >
+                          複製
                         </button>
                       )}
                       <button
