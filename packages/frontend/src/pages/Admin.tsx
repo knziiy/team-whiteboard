@@ -84,44 +84,44 @@ export default function Admin({ user, onBack }: Props) {
   const memberIds = new Set(members.map((m) => m.userId));
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b px-6 py-4 flex items-center gap-4">
-        <button onClick={onBack} className="text-blue-600 hover:underline text-sm">
-          ← ダッシュボード
+    <div className="min-h-screen bg-white">
+      <header className="border-b border-gray-100 px-6 py-4 flex items-center gap-4">
+        <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-900 transition">
+          &larr; ダッシュボード
         </button>
-        <h1 className="text-xl font-bold">管理者パネル</h1>
+        <h1 className="text-lg font-semibold tracking-tight text-gray-900">管理</h1>
       </header>
 
-      <main className="max-w-4xl mx-auto p-6">
+      <main className="max-w-5xl mx-auto px-6 py-8">
         {error && (
-          <p className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded">{error}</p>
+          <p className="mb-6 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg">{error}</p>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Groups list */}
-          <div className="bg-white rounded-xl shadow-sm border p-4">
-            <h2 className="font-semibold mb-3">グループ</h2>
-            <form onSubmit={createGroup} className="flex gap-2 mb-4">
+          <div>
+            <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">グループ</h2>
+            <form onSubmit={createGroup} className="flex gap-2 mb-5">
               <input
                 type="text"
                 placeholder="グループ名"
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
-                className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
               />
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm"
+                className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition"
               >
                 作成
               </button>
             </form>
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {groups.map((g) => (
                 <li
                   key={g.id}
-                  className={`flex items-center justify-between p-2 rounded cursor-pointer ${
-                    selectedGroup?.id === g.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition ${
+                    selectedGroup?.id === g.id ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 text-gray-700'
                   }`}
                 >
                   <button
@@ -132,7 +132,9 @@ export default function Admin({ user, onBack }: Props) {
                   </button>
                   <button
                     onClick={() => deleteGroup(g.id)}
-                    className="text-xs text-red-500 hover:text-red-700 ml-2"
+                    className={`text-xs ml-2 transition ${
+                      selectedGroup?.id === g.id ? 'text-gray-400 hover:text-white' : 'text-gray-300 hover:text-red-500'
+                    }`}
                   >
                     削除
                   </button>
@@ -143,31 +145,39 @@ export default function Admin({ user, onBack }: Props) {
 
           {/* Members */}
           {selectedGroup && (
-            <div className="bg-white rounded-xl shadow-sm border p-4">
-              <h2 className="font-semibold mb-3">{selectedGroup.name} のメンバー</h2>
-              <ul className="space-y-2 mb-4">
+            <div>
+              <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">
+                {selectedGroup.name} のメンバー
+              </h2>
+              <ul className="space-y-1 mb-6">
                 {members.map((m) => (
-                  <li key={m.userId} className="flex items-center justify-between text-sm">
-                    <span>{m.displayName} ({m.email})</span>
+                  <li key={m.userId} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 transition">
+                    <div>
+                      <span className="text-sm text-gray-900">{m.displayName}</span>
+                      <span className="text-xs text-gray-400 ml-2">{m.email}</span>
+                    </div>
                     <button
                       onClick={() => removeMember(m.userId)}
-                      className="text-xs text-red-500 hover:text-red-700"
+                      className="text-xs text-gray-300 hover:text-red-500 transition"
                     >
                       削除
                     </button>
                   </li>
                 ))}
               </ul>
-              <h3 className="text-sm font-medium mb-2 text-gray-600">ユーザーを追加</h3>
+              <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">ユーザーを追加</h3>
               <ul className="space-y-1">
                 {users
                   .filter((u) => !memberIds.has(u.id))
                   .map((u) => (
-                    <li key={u.id} className="flex items-center justify-between text-sm">
-                      <span>{u.displayName} ({u.email})</span>
+                    <li key={u.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 transition">
+                      <div>
+                        <span className="text-sm text-gray-900">{u.displayName}</span>
+                        <span className="text-xs text-gray-400 ml-2">{u.email}</span>
+                      </div>
                       <button
                         onClick={() => addMember(u.id)}
-                        className="text-xs text-blue-600 hover:text-blue-800"
+                        className="text-xs text-gray-400 hover:text-gray-900 transition"
                       >
                         追加
                       </button>

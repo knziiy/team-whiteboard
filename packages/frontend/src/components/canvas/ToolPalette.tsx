@@ -39,16 +39,16 @@ export default function ToolPalette({ onApplyColor, onApplyFontSize, onApplyText
   const hasSelection = selectedEl != null;
 
   return (
-    <div className="flex flex-col gap-2 bg-white rounded-xl shadow-lg border p-2">
+    <div className="flex flex-col gap-1.5 bg-white/90 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm p-2">
       {TOOLS.map((tool) => (
         <button
           key={tool.id}
           onClick={() => setActiveTool(tool.id)}
           title={tool.label}
-          className={`w-10 h-10 rounded-lg text-lg flex items-center justify-center transition-colors ${
+          className={`w-10 h-10 rounded-lg text-lg flex items-center justify-center transition ${
             activeTool === tool.id
-              ? 'bg-blue-600 text-white'
-              : 'hover:bg-gray-100 text-gray-700'
+              ? 'bg-gray-900 text-white'
+              : 'hover:bg-gray-100 text-gray-500'
           }`}
         >
           {tool.icon}
@@ -56,21 +56,21 @@ export default function ToolPalette({ onApplyColor, onApplyFontSize, onApplyText
       ))}
 
       {hasSelection && (
-        <div className="border-t mt-1 pt-2 flex flex-col gap-1">
+        <div className="border-t border-gray-100 mt-1 pt-2 flex flex-col gap-1">
           <button
             onClick={onBringToFront}
             title="最前面に移動"
-            className="w-full text-xs text-gray-600 hover:bg-gray-100 rounded px-1 py-1 text-left"
+            className="w-full text-xs text-gray-500 hover:bg-gray-100 rounded-md px-1 py-1.5 text-left transition"
           >↑ 最前面</button>
           <button
             onClick={onSendToBack}
             title="最背面に移動"
-            className="w-full text-xs text-gray-600 hover:bg-gray-100 rounded px-1 py-1 text-left"
+            className="w-full text-xs text-gray-500 hover:bg-gray-100 rounded-md px-1 py-1.5 text-left transition"
           >↓ 最背面</button>
         </div>
       )}
 
-      <div className="border-t mt-1 pt-2">
+      <div className="border-t border-gray-100 mt-1 pt-2">
         <div className="grid grid-cols-2 gap-1">
           {COLORS.map((color) => (
             <button
@@ -81,7 +81,7 @@ export default function ToolPalette({ onApplyColor, onApplyFontSize, onApplyText
               }}
               title={color}
               className={`w-4 h-4 rounded-full border-2 transition-transform ${
-                activeColor === color ? 'border-blue-600 scale-125' : 'border-gray-200'
+                activeColor === color ? 'border-gray-900 scale-125' : 'border-gray-200'
               }`}
               style={{ backgroundColor: color }}
             />
@@ -91,18 +91,18 @@ export default function ToolPalette({ onApplyColor, onApplyFontSize, onApplyText
 
       {isSticky && (
         <>
-          <div className="border-t mt-1 pt-2 flex items-center justify-between gap-1">
+          <div className="border-t border-gray-100 mt-1 pt-2 flex items-center justify-between gap-1">
             <button
               onClick={() => onApplyFontSize?.(Math.max(8, currentFontSize - 2))}
-              className="w-7 h-7 rounded hover:bg-gray-100 text-gray-700 text-base leading-none flex items-center justify-center"
+              className="w-7 h-7 rounded-md hover:bg-gray-100 text-gray-500 text-base leading-none flex items-center justify-center transition"
             >−</button>
-            <span className="text-xs text-gray-600 w-8 text-center">{currentFontSize}</span>
+            <span className="text-xs text-gray-500 w-8 text-center">{currentFontSize}</span>
             <button
               onClick={() => onApplyFontSize?.(Math.min(72, currentFontSize + 2))}
-              className="w-7 h-7 rounded hover:bg-gray-100 text-gray-700 text-base leading-none flex items-center justify-center"
-            >＋</button>
+              className="w-7 h-7 rounded-md hover:bg-gray-100 text-gray-500 text-base leading-none flex items-center justify-center transition"
+            >+</button>
           </div>
-          <div className="border-t mt-1 pt-2">
+          <div className="border-t border-gray-100 mt-1 pt-2">
             <p className="text-xs text-gray-400 mb-1 text-center">A</p>
             <div className="grid grid-cols-2 gap-1">
               {COLORS.map((color) => (

@@ -117,47 +117,48 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Team Whiteboards</h1>
-        <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-white">
+      <header className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <h1 className="text-lg font-semibold tracking-tight text-gray-900">Team Whiteboards</h1>
+        <div className="flex items-center gap-3">
           <button
             onClick={openCreateModal}
-            className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-1.5 bg-gray-900 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-800 transition"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
               <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
             </svg>
             新しいボード
           </button>
-          <span className="text-sm text-gray-600">{user.displayName}</span>
+          <div className="w-px h-5 bg-gray-200" />
+          <span className="text-sm text-gray-500">{user.displayName}</span>
           {user.isAdmin && (
-            <button onClick={onAdmin} className="text-sm text-blue-600 hover:underline">
+            <button onClick={onAdmin} className="text-sm text-gray-400 hover:text-gray-900 transition">
               管理
             </button>
           )}
           <button
             onClick={onLogout}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-gray-400 hover:text-gray-900 transition"
           >
             ログアウト
           </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto p-6">
+      <main className="max-w-5xl mx-auto px-6 py-8">
         {error && (
-          <p className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded">{error}</p>
+          <p className="mb-6 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg">{error}</p>
         )}
 
         {loading ? (
-          <p className="text-gray-500 text-sm">読み込み中...</p>
+          <p className="text-gray-400 text-sm">読み込み中...</p>
         ) : boards.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <p className="text-sm mb-2">ボードがありません</p>
+          <div className="text-center py-24">
+            <p className="text-sm text-gray-400 mb-3">ボードがありません</p>
             <button
               onClick={openCreateModal}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-gray-900 underline underline-offset-2 hover:no-underline transition"
             >
               最初のボードを作成
             </button>
@@ -167,10 +168,10 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
             {boards.map((board) => (
               <div
                 key={board.id}
-                className="relative bg-white rounded-xl shadow-sm border hover:shadow-md transition-shadow"
+                className="group relative rounded-xl border border-gray-100 bg-white hover:border-gray-300 transition-all"
               >
                 {editingBoardId === board.id ? (
-                  <div className="w-full text-left p-4">
+                  <div className="w-full text-left p-5">
                     <input
                       type="text"
                       value={editingTitle}
@@ -182,10 +183,10 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                         if (e.key === 'Escape') setEditingBoardId(null);
                       }}
                       autoFocus
-                      className="w-full font-medium text-gray-900 border border-blue-400 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full font-medium text-gray-900 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     />
                     {board.groupId && (
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 mt-2">
                         {groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}
                       </p>
                     )}
@@ -193,32 +194,32 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                 ) : (
                   <button
                     onClick={() => onSelectBoard(board.id)}
-                    className="w-full text-left p-4"
+                    className="w-full text-left p-5"
                   >
-                    <h3 className="font-medium text-gray-900">{board.title}</h3>
+                    <h3 className="font-medium text-gray-900 text-sm">{board.title}</h3>
                     {board.groupId && (
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 mt-1.5">
                         {groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}
                       </p>
                     )}
                   </button>
                 )}
                 {(user.isAdmin || board.createdBy === user.id) && (
-                  <div className="absolute top-2 right-2" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
+                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
                     <button
                       onClick={() => setMenuOpenBoardId(menuOpenBoardId === board.id ? null : board.id)}
-                      className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                      className="p-1 rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                        <path fillRule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" />
+                        <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM8.5 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM15.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
                       </svg>
                     </button>
                     {menuOpenBoardId === board.id && (
-                      <div className="absolute right-0 top-8 z-10 w-36 bg-white rounded-lg shadow-lg border py-1">
+                      <div className="absolute right-0 top-8 z-10 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
                         {user.isAdmin && (
                           <button
                             onClick={() => { setEditingBoardId(board.id); setEditingTitle(board.title); setMenuOpenBoardId(null); }}
-                            className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                            className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
                           >
                             名前変更
                           </button>
@@ -226,7 +227,7 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                         {user.isAdmin && groups.length > 0 && (
                           <button
                             onClick={() => { setChangingGroupBoardId(board.id); setMenuOpenBoardId(null); }}
-                            className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                            className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
                           >
                             グループ変更
                           </button>
@@ -234,14 +235,14 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                         {user.isAdmin && (
                           <button
                             onClick={() => { duplicateBoard(board.id); setMenuOpenBoardId(null); }}
-                            className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                            className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
                           >
                             複製
                           </button>
                         )}
                         <button
                           onClick={() => { deleteBoard(board.id); setMenuOpenBoardId(null); }}
-                          className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-gray-100"
+                          className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-gray-50 transition"
                         >
                           削除
                         </button>
@@ -250,7 +251,7 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                   </div>
                 )}
                 {changingGroupBoardId === board.id && (
-                  <div className="px-4 pb-3">
+                  <div className="px-5 pb-4">
                     <select
                       value={board.groupId ?? ''}
                       onChange={(e) => {
@@ -259,7 +260,7 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                       }}
                       onBlur={() => setChangingGroupBoardId(null)}
                       autoFocus
-                      className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
                     >
                       <option value="">グループなし</option>
                       {groups.map((g) => (
@@ -277,17 +278,17 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
       {/* 新規作成モーダル */}
       {showCreateModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
           onClick={() => setShowCreateModal(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold mb-4">新しいボードを作成</h2>
+            <h2 className="text-base font-semibold text-gray-900 mb-5">新しいボードを作成</h2>
             <form onSubmit={createBoard} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
                   タイトル
                 </label>
                 <input
@@ -296,18 +297,18 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   autoFocus
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
                 />
               </div>
               {groups.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
                     グループ
                   </label>
                   <select
                     value={newGroupId}
                     onChange={(e) => setNewGroupId(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
                   >
                     <option value="">グループなし</option>
                     {groups.map((g) => (
@@ -316,17 +317,17 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                   </select>
                 </div>
               )}
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition"
                 >
                   キャンセル
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 transition"
                 >
                   作成
                 </button>

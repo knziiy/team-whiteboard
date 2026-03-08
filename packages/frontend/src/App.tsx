@@ -13,8 +13,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">読み込み中...</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="text-sm text-gray-400">読み込み中...</p>
       </div>
     );
   }

@@ -448,17 +448,16 @@ export default function Board({ boardId, user, onBack }: Props) {
   const editingProps = editingEl?.props as StickyProps | undefined;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-100">
+    <div className="flex h-screen overflow-hidden bg-neutral-50">
       {/* Header */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-white rounded-xl shadow px-4 py-2">
-        <button onClick={onBack} className="text-blue-600 text-sm hover:underline">
-          ← 戻る
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-white/90 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm px-4 py-2">
+        <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-900 transition">
+          &larr;
         </button>
-        <span className="text-sm font-medium text-gray-700">{boardTitle || 'ボード'}</span>
-        <span className="text-xs text-gray-400">
-          Delete: 削除　Ctrl+Z: Undo　Ctrl+Shift+Z: Redo　ダブルクリック: 付箋編集　Ctrl+ホイール: ズーム
-        </span>
-        <div className="flex items-center gap-1 border border-gray-200 rounded overflow-hidden">
+        <div className="w-px h-4 bg-gray-200" />
+        <span className="text-sm font-medium text-gray-900">{boardTitle || 'ボード'}</span>
+        <div className="w-px h-4 bg-gray-200" />
+        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
           <button
             onClick={() => {
               const cx = stageSize.width / 2;
@@ -467,11 +466,11 @@ export default function Board({ boardId, user, onBack }: Props) {
               setStagePos({ x: cx - (cx - stagePos.x) * (newScale / stageScale), y: cy - (cy - stagePos.y) * (newScale / stageScale) });
               setStageScale(newScale);
             }}
-            className="px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 text-sm leading-none"
+            className="px-2 py-1 text-gray-400 hover:text-gray-900 hover:bg-gray-50 text-sm leading-none transition"
           >−</button>
           <button
             onClick={() => { setStageScale(1); setStagePos({ x: 0, y: 0 }); }}
-            className="px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-100 border-x border-gray-200"
+            className="px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 border-x border-gray-200 min-w-[3rem] text-center transition"
           >{Math.round(stageScale * 100)}%</button>
           <button
             onClick={() => {
@@ -481,8 +480,8 @@ export default function Board({ boardId, user, onBack }: Props) {
               setStagePos({ x: cx - (cx - stagePos.x) * (newScale / stageScale), y: cy - (cy - stagePos.y) * (newScale / stageScale) });
               setStageScale(newScale);
             }}
-            className="px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 text-sm leading-none"
-          >＋</button>
+            className="px-2 py-1 text-gray-400 hover:text-gray-900 hover:bg-gray-50 text-sm leading-none transition"
+          >+</button>
         </div>
       </div>
 
@@ -628,12 +627,12 @@ function OnlineUserBadges() {
   const onlineUsers = useBoardStore((s) => s.onlineUsers);
   if (onlineUsers.length === 0) return null;
   return (
-    <div className="absolute bottom-4 left-4 z-10 flex gap-2">
+    <div className="absolute bottom-4 left-4 z-10 flex gap-1.5">
       {onlineUsers.map((u) => (
         <div
           key={u.userId}
           title={u.displayName}
-          className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
+          className="bg-gray-900 text-white text-xs w-7 h-7 rounded-full flex items-center justify-center font-medium"
         >
           {u.displayName[0]?.toUpperCase()}
         </div>
