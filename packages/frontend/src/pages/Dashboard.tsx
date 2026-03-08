@@ -205,58 +205,56 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                     )}
                   </button>
                 )}
-                {(user.isAdmin || board.createdBy === user.id) && (
-                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
-                    <button
-                      onClick={() => setMenuOpenBoardId(menuOpenBoardId === board.id ? null : board.id)}
-                      className="p-1 rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                        <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM8.5 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM15.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
-                      </svg>
-                    </button>
-                    {menuOpenBoardId === board.id && (
-                      <div className="absolute right-0 top-8 z-10 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
-                        {user.isAdmin && (
-                          <button
-                            onClick={() => { setEditingBoardId(board.id); setEditingTitle(board.title); setMenuOpenBoardId(null); }}
-                            className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
-                          >
-                            名前変更
-                          </button>
-                        )}
-                        {user.isAdmin && groups.length > 0 && (
-                          <button
-                            onClick={() => { setChangingGroupBoardId(board.id); setMenuOpenBoardId(null); }}
-                            className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
-                          >
-                            グループ変更
-                          </button>
-                        )}
-                        {user.isAdmin && (
-                          <button
-                            onClick={() => { duplicateBoard(board.id); setMenuOpenBoardId(null); }}
-                            className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
-                          >
-                            複製
-                          </button>
-                        )}
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
+                  <button
+                    onClick={() => setMenuOpenBoardId(menuOpenBoardId === board.id ? null : board.id)}
+                    className="p-1 rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM8.5 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM15.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
+                    </svg>
+                  </button>
+                  {menuOpenBoardId === board.id && (
+                    <div className="absolute right-0 top-8 z-10 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
+                      <button
+                        onClick={() => { setEditingBoardId(board.id); setEditingTitle(board.title); setMenuOpenBoardId(null); }}
+                        className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
+                      >
+                        名前変更
+                      </button>
+                      {(user.isAdmin || board.createdBy === user.id) && groups.length > 0 && (
+                        <button
+                          onClick={() => { setChangingGroupBoardId(board.id); setMenuOpenBoardId(null); }}
+                          className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
+                        >
+                          グループ変更
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { duplicateBoard(board.id); setMenuOpenBoardId(null); }}
+                        className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
+                      >
+                        複製
+                      </button>
+                      {user.isAdmin && (
                         <button
                           onClick={() => { setInfoBoardId(board.id); setMenuOpenBoardId(null); }}
                           className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
                         >
                           情報
                         </button>
+                      )}
+                      {(user.isAdmin || board.createdBy === user.id) && (
                         <button
                           onClick={() => { deleteBoard(board.id); setMenuOpenBoardId(null); }}
                           className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-gray-50 transition"
                         >
                           削除
                         </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )}
+                </div>
                 {changingGroupBoardId === board.id && (
                   <div className="px-5 pb-4">
                     <select

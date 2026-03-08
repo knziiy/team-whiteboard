@@ -98,7 +98,6 @@ async function route(
   // /api/boards/:boardId/duplicate
   const duplicateMatch = path.match(/^\/api\/boards\/([^/]+)\/duplicate$/);
   if (duplicateMatch && method === 'POST') {
-    requireAdmin(user);
     return handleDuplicateBoard(user, duplicateMatch[1]!);
   }
 
@@ -234,13 +233,14 @@ async function handleGetBoard(user: AuthUser, boardId: string) {
 async function handleUpdateBoard(user: AuthUser, boardId: string, body: Record<string, unknown>) {
   const board = await getBoard(boardId);
   if (!board) throw new HttpError(404, 'Not found');
-  if (!user.isAdmin && board.createdBy !== user.id) throw new HttpError(403, 'Forbidden');
+  await assertBoardAccess(user, board);
 
   const title = (body['title'] as string | undefined) ?? board.title;
 
-  // groupId: undefined=変更なし, null=グループ解除, string=グループ変更
+  // groupId 変更は管理者または作成者のみ
   let groupId: string | null | undefined;
   if ('groupId' in body) {
+    if (!user.isAdmin && board.createdBy !== user.id) throw new HttpError(403, 'Forbidden');
     const raw = body['groupId'] as string | null | undefined;
     if (raw === null || raw === '') {
       groupId = null;
@@ -269,6 +269,7 @@ async function handleDeleteBoard(user: AuthUser, boardId: string) {
 async function handleDuplicateBoard(user: AuthUser, sourceBoardId: string) {
   const source = await getBoard(sourceBoardId);
   if (!source) throw new HttpError(404, 'Not found');
+  await assertBoardAccess(user, source);
 
   const newBoardId = uuidv4();
   const now = new Date().toISOString();
