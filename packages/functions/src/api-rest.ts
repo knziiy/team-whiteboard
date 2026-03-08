@@ -6,7 +6,7 @@ import type { AuthUser } from './lib/types.js';
 import {
   getBoard,
   putBoard,
-  updateBoardTitle,
+  updateBoard,
   deleteBoard,
   scanBoards,
   deleteAllElementsForBoard,
@@ -222,8 +222,23 @@ async function handleUpdateBoard(user: AuthUser, boardId: string, body: Record<s
   if (!user.isAdmin && board.createdBy !== user.id) throw new HttpError(403, 'Forbidden');
 
   const title = (body['title'] as string | undefined) ?? board.title;
-  await updateBoardTitle(boardId, title);
-  return respond(200, boardToApi({ ...board, title, updatedAt: new Date().toISOString() }));
+
+  // groupId: undefined=変更なし, null=グループ解除, string=グループ変更
+  let groupId: string | null | undefined;
+  if ('groupId' in body) {
+    const raw = body['groupId'] as string | null | undefined;
+    if (raw === null || raw === '') {
+      groupId = null;
+    } else if (raw) {
+      const group = await getGroup(raw);
+      if (!group) throw new HttpError(400, 'Group not found');
+      groupId = raw;
+    }
+  }
+
+  await updateBoard(boardId, { title, groupId });
+  const updatedGroupId = groupId === undefined ? board.groupId : (groupId ?? undefined);
+  return respond(200, boardToApi({ ...board, title, groupId: updatedGroupId, updatedAt: new Date().toISOString() }));
 }
 
 async function handleDeleteBoard(user: AuthUser, boardId: string) {

@@ -62,6 +62,21 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
     setEditingBoardId(null);
   };
 
+  const changeBoardGroup = async (boardId: string, groupId: string) => {
+    try {
+      const updated = await api.boards.update(
+        boardId,
+        { groupId: groupId || null },
+        user.idToken,
+      );
+      setBoards((prev) =>
+        prev.map((b) => (b.id === boardId ? { ...b, groupId: updated.groupId } : b)),
+      );
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   const deleteBoard = async (id: string) => {
     try {
       await api.boards.delete(id, user.idToken);
@@ -163,21 +178,35 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                   )}
                 </button>
                 {(user.isAdmin || board.createdBy === user.id) && (
-                  <div className="border-t px-4 py-2 flex gap-3">
-                    {user.isAdmin && editingBoardId !== board.id && (
+                  <div className="border-t px-4 py-2 flex flex-col gap-2">
+                    <div className="flex gap-3">
+                      {user.isAdmin && editingBoardId !== board.id && (
+                        <button
+                          onClick={() => { setEditingBoardId(board.id); setEditingTitle(board.title); }}
+                          className="text-xs text-blue-500 hover:text-blue-700"
+                        >
+                          名前変更
+                        </button>
+                      )}
                       <button
-                        onClick={() => { setEditingBoardId(board.id); setEditingTitle(board.title); }}
-                        className="text-xs text-blue-500 hover:text-blue-700"
+                        onClick={() => deleteBoard(board.id)}
+                        className="text-xs text-red-500 hover:text-red-700"
                       >
-                        名前変更
+                        削除
                       </button>
+                    </div>
+                    {user.isAdmin && groups.length > 0 && (
+                      <select
+                        value={board.groupId ?? ''}
+                        onChange={(e) => changeBoardGroup(board.id, e.target.value)}
+                        className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">グループなし</option>
+                        {groups.map((g) => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
                     )}
-                    <button
-                      onClick={() => deleteBoard(board.id)}
-                      className="text-xs text-red-500 hover:text-red-700"
-                    >
-                      削除
-                    </button>
                   </div>
                 )}
               </div>

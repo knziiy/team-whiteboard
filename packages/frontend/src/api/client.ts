@@ -25,7 +25,7 @@ export const api = {
     get: (id: string, token: string) => request<any>(`/boards/${id}`, { token }),
     create: (body: { title: string; groupId?: string }, token: string) =>
       request<any>('/boards', { method: 'POST', body: JSON.stringify(body), token }),
-    update: (id: string, body: { title?: string }, token: string) =>
+    update: (id: string, body: { title?: string; groupId?: string | null }, token: string) =>
       request<any>(`/boards/${id}`, { method: 'PATCH', body: JSON.stringify(body), token }),
     delete: (id: string, token: string) =>
       request<void>(`/boards/${id}`, { method: 'DELETE', token }),

@@ -176,21 +176,52 @@ export async function putBoard(item: BoardItem): Promise<void> {
   await ddb.send(new PutCommand({ TableName: T.boards, Item: item }));
 }
 
-export async function updateBoardTitle(
+export async function updateBoard(
   boardId: string,
-  title: string,
+  fields: { title: string; groupId?: string | null },
 ): Promise<void> {
-  await ddb.send(
-    new UpdateCommand({
-      TableName: T.boards,
-      Key: { boardId },
-      UpdateExpression: 'SET title = :t, updatedAt = :u',
-      ExpressionAttributeValues: {
-        ':t': title,
-        ':u': new Date().toISOString(),
-      },
-    }),
-  );
+  const now = new Date().toISOString();
+  if (fields.groupId === null) {
+    // groupId を削除
+    await ddb.send(
+      new UpdateCommand({
+        TableName: T.boards,
+        Key: { boardId },
+        UpdateExpression: 'SET title = :t, updatedAt = :u REMOVE groupId',
+        ExpressionAttributeValues: {
+          ':t': fields.title,
+          ':u': now,
+        },
+      }),
+    );
+  } else if (fields.groupId) {
+    // groupId を設定
+    await ddb.send(
+      new UpdateCommand({
+        TableName: T.boards,
+        Key: { boardId },
+        UpdateExpression: 'SET title = :t, groupId = :g, updatedAt = :u',
+        ExpressionAttributeValues: {
+          ':t': fields.title,
+          ':g': fields.groupId,
+          ':u': now,
+        },
+      }),
+    );
+  } else {
+    // groupId 変更なし（undefined）
+    await ddb.send(
+      new UpdateCommand({
+        TableName: T.boards,
+        Key: { boardId },
+        UpdateExpression: 'SET title = :t, updatedAt = :u',
+        ExpressionAttributeValues: {
+          ':t': fields.title,
+          ':u': now,
+        },
+      }),
+    );
+  }
 }
 
 export async function deleteBoard(boardId: string): Promise<void> {
