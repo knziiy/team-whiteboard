@@ -13,16 +13,6 @@ const env = {
   region: 'us-east-1',
 };
 
-// CloudFront secret - must match the value configured in CloudFront custom header
-// Generate with: export CLOUDFRONT_SECRET=$(openssl rand -hex 32)
-const cfSecret = process.env['CLOUDFRONT_SECRET'];
-if (!cfSecret) {
-  throw new Error(
-    'CLOUDFRONT_SECRET environment variable is required.\n' +
-    'Generate with: export CLOUDFRONT_SECRET=$(openssl rand -hex 32)',
-  );
-}
-
 // デプロイ順序: Auth → Data → Api → Frontend
 
 const authStack = new AuthStack(app, 'WhiteboardAuth', { env });
@@ -34,14 +24,14 @@ const apiStack = new ApiStack(app, 'WhiteboardApi', {
   env,
   data: dataStack,
   auth: authStack,
-  cfSecret,
+  cfSecret: dataStack.cfSecret,
 });
 apiStack.addDependency(dataStack);
 
 const frontendStack = new FrontendStack(app, 'WhiteboardFrontend', {
   env,
   api: apiStack,
-  cfSecret,
+  cfSecret: dataStack.cfSecret,
 });
 frontendStack.addDependency(apiStack);
 

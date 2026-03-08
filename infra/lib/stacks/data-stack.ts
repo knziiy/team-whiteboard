@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 export class DataStack extends cdk.Stack {
@@ -9,6 +10,7 @@ export class DataStack extends cdk.Stack {
   public readonly usersTable: dynamodb.Table;
   public readonly groupsTable: dynamodb.Table;
   public readonly groupMembersTable: dynamodb.Table;
+  public readonly cfSecret: secretsmanager.Secret;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -72,6 +74,16 @@ export class DataStack extends cdk.Stack {
       indexName: 'userId-index',
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // CloudFront origin verification secret
+    this.cfSecret = new secretsmanager.Secret(this, 'CloudFrontSecret', {
+      secretName: 'whiteboard/cloudfront-secret',
+      description: 'CloudFront origin verification secret',
+      generateSecretString: {
+        excludePunctuation: true,
+        passwordLength: 64,
+      },
     });
   }
 }

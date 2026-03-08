@@ -3,13 +3,14 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import type { ApiStack } from './api-stack';
 
 interface FrontendStackProps extends cdk.StackProps {
   api: ApiStack;
-  cfSecret: string;
+  cfSecret: secretsmanager.ISecret;
 }
 
 export class FrontendStack extends cdk.Stack {
@@ -31,7 +32,7 @@ export class FrontendStack extends cdk.Stack {
     const restApiOrigin = new origins.HttpOrigin(api.httpApiDomain, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
       customHeaders: {
-        'X-CF-Secret': cfSecret,
+        'X-CF-Secret': cfSecret.secretValue.unsafeUnwrap(),
       },
     });
 
@@ -41,7 +42,7 @@ export class FrontendStack extends cdk.Stack {
     const wsApiOrigin = new origins.HttpOrigin(api.wsApiDomain, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
       customHeaders: {
-        'X-CF-Secret': cfSecret,
+        'X-CF-Secret': cfSecret.secretValue.unsafeUnwrap(),
       },
       readTimeout: cdk.Duration.seconds(60),
     });
