@@ -186,11 +186,11 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                       autoFocus
                       className="w-full font-medium text-gray-900 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     />
-                    {board.groupId && (
-                      <p className="text-xs text-gray-400 mt-2">
-                        {groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-400 mt-2">
+                      {board.groupId
+                        ? (groups.find((g) => g.id === board.groupId)?.name ?? 'グループ')
+                        : 'グループなし'}
+                    </p>
                   </div>
                 ) : (
                   <button
@@ -198,11 +198,11 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                     className="w-full text-left p-5"
                   >
                     <h3 className="font-medium text-gray-900 text-sm">{board.title}</h3>
-                    {board.groupId && (
-                      <p className="text-xs text-gray-400 mt-1.5">
-                        {groups.find((g) => g.id === board.groupId)?.name ?? 'グループ'}
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-400 mt-1.5">
+                      {board.groupId
+                        ? (groups.find((g) => g.id === board.groupId)?.name ?? 'グループ')
+                        : 'グループなし'}
+                    </p>
                   </button>
                 )}
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
