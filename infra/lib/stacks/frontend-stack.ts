@@ -98,7 +98,7 @@ export class FrontendStack extends cdk.Stack {
     });
 
     // Deploy frontend build
-    new s3deploy.BucketDeployment(this, 'Deploy', {
+    const spaDeploy = new s3deploy.BucketDeployment(this, 'Deploy', {
       sources: [
         s3deploy.Source.asset(
           path.join(__dirname, '../../../packages/frontend/dist'),
@@ -107,11 +107,14 @@ export class FrontendStack extends cdk.Stack {
       destinationBucket: bucket,
       distribution: this.distribution,
       distributionPaths: ['/*'],
+      // config.json は DeployConfig で別途デプロイするため prune 対象から除外
+      exclude: ['config.json'],
     });
 
     // Runtime config: Cognito の値をフロントエンドに自動注入
     // フロントエンドは /config.json を fetch して UserPoolId / ClientId を取得する
-    new s3deploy.BucketDeployment(this, 'DeployConfig', {
+    // Deploy の後に実行して config.json が確実に残るようにする
+    const configDeploy = new s3deploy.BucketDeployment(this, 'DeployConfig', {
       sources: [
         s3deploy.Source.jsonData('config.json', {
           cognitoUserPoolId: auth.userPool.userPoolId,
@@ -122,6 +125,7 @@ export class FrontendStack extends cdk.Stack {
       // config.json のみデプロイ。既存ファイルを削除しない
       prune: false,
     });
+    configDeploy.node.addDependency(spaDeploy);
 
     new cdk.CfnOutput(this, 'CloudFrontUrl', {
       value: `https://${this.distribution.distributionDomainName}`,
