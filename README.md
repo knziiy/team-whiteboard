@@ -26,8 +26,6 @@ Browser
                               DynamoDB (6テーブル)
                                     │
                            Cognito User Pool (JWT)
-
-WAF WebACL (IP制限) → CloudFront
 ```
 
 ## 技術スタック
@@ -151,7 +149,7 @@ npm install
 npx cdk deploy --all
 ```
 
-デプロイ順序: `WhiteboardAuth` → `WhiteboardData` → `WhiteboardApi` → `WhiteboardFrontend` → `WhiteboardWaf`
+デプロイ順序: `WhiteboardAuth` → `WhiteboardData` → `WhiteboardApi` → `WhiteboardFrontend`
 
 > **CloudFront シークレット**: CloudFront → API Gateway 間のオリジン検証シークレットは、初回デプロイ時に AWS Secrets Manager（`whiteboard/cloudfront-secret`）で自動生成・永続化されます。手動設定は不要です。
 
@@ -164,28 +162,12 @@ WhiteboardApi.WsApiEndpoint       = wss://xxxxxxxxxx.execute-api.us-east-1.amazo
 WhiteboardFrontend.CloudFrontUrl  = https://xxxxxxxxxxxx.cloudfront.net
 ```
 
-### 4. フロントエンド環境変数を更新して再デプロイ
+### 3. フロントエンド環境変数を更新して再デプロイ
 
 CDK 出力の Cognito 値を `packages/frontend/.env.production` に設定後:
 ```bash
 npm run build --workspace=packages/frontend
 cd infra && npx cdk deploy WhiteboardFrontend
-```
-
-### 5. WAF IP 制限の設定
-
-`infra/cdk.json` の `allowedCidrs` を編集:
-```json
-{
-  "context": {
-    "allowedCidrs": ["203.0.113.0/24", "198.51.100.1/32"]
-  }
-}
-```
-
-再デプロイ:
-```bash
-cd infra && npx cdk deploy WhiteboardWaf
 ```
 
 ---
