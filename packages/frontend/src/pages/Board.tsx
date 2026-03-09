@@ -272,7 +272,7 @@ export default function Board({ boardId, user, onBack }: Props) {
           id,
           boardId,
           type: 'freehand',
-          props: { points: [pos.x, pos.y], stroke: activeColor, strokeWidth: 3 } as FreehandProps,
+          props: { points: [pos.x, pos.y], stroke: '#000000', strokeWidth: 3 } as FreehandProps,
           zIndex: elements.size,
           createdBy: user.id,
           updatedAt: new Date().toISOString(),
