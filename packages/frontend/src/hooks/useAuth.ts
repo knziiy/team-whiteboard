@@ -93,6 +93,45 @@ export function useAuthProvider(): AuthContextValue {
     });
   }, []);
 
+  // 5分間隔の定期セッションリフレッシュ（削除済みユーザーの検知）
+  useEffect(() => {
+    if (LOCAL_MODE || !user) return;
+
+    const SESSION_REFRESH_INTERVAL = 5 * 60 * 1000; // 5分
+
+    const refreshSession = async () => {
+      try {
+        const pool = await createPool();
+        const cognitoUser = pool.getCurrentUser();
+        if (!cognitoUser) { setUser(null); return; }
+        cognitoUser.getSession((err: Error | null, session: any) => {
+          if (err || !session?.isValid()) {
+            setUser(null);
+          } else {
+            setUser(parseCognitoSession(session));
+          }
+        });
+      } catch {
+        setUser(null);
+      }
+    };
+
+    const timer = setInterval(refreshSession, SESSION_REFRESH_INTERVAL);
+    return () => clearInterval(timer);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // REST API 401 → ログアウト
+  useEffect(() => {
+    const handleUnauthorized = async () => {
+      if (LOCAL_MODE) return;
+      const pool = await createPool();
+      pool.getCurrentUser()?.signOut();
+      setUser(null);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
   const localLogin = useCallback((displayName: string, isAdmin: boolean): AuthUser => {
     const u: Omit<AuthUser, 'idToken'> = {
       id: crypto.randomUUID(),

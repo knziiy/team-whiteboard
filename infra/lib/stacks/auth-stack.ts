@@ -53,6 +53,10 @@ export class AuthStack extends cdk.Stack {
         userPassword: true,
       },
       generateSecret: false,
+      idTokenValidity: cdk.Duration.minutes(15),
+      accessTokenValidity: cdk.Duration.minutes(15),
+      refreshTokenValidity: cdk.Duration.days(7),
+      enableTokenRevocation: true,
     });
 
     new cdk.CfnOutput(this, 'UserPoolId', { value: this.userPool.userPoolId });

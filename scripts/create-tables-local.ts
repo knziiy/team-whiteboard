@@ -34,12 +34,19 @@ async function main() {
     AttributeDefinitions: [
       { AttributeName: 'connectionId', AttributeType: 'S' },
       { AttributeName: 'boardId', AttributeType: 'S' },
+      { AttributeName: 'userId', AttributeType: 'S' },
     ],
     KeySchema: [{ AttributeName: 'connectionId', KeyType: 'HASH' }],
     GlobalSecondaryIndexes: [
       {
         IndexName: 'boardId-index',
         KeySchema: [{ AttributeName: 'boardId', KeyType: 'HASH' }],
+        Projection: { ProjectionType: 'ALL' },
+        ProvisionedThroughput: { ReadCapacityUnits: 1, WriteCapacityUnits: 1 },
+      },
+      {
+        IndexName: 'userId-index',
+        KeySchema: [{ AttributeName: 'userId', KeyType: 'HASH' }],
         Projection: { ProjectionType: 'ALL' },
         ProvisionedThroughput: { ReadCapacityUnits: 1, WriteCapacityUnits: 1 },
       },

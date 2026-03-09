@@ -50,6 +50,12 @@ export class ApiStack extends cdk.Stack {
       table.grantReadWriteData(lambdaRole);
     }
 
+    // Cognito ユーザー管理権限（ユーザー削除 API 用）
+    lambdaRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['cognito-idp:AdminDeleteUser', 'cognito-idp:AdminUserGlobalSignOut'],
+      resources: [auth.userPool.userPoolArn],
+    }));
+
     // ─── Lambda 共通設定 ───────────────────────────────────────────────────────
 
     const commonEnv: Record<string, string> = {
@@ -180,12 +186,14 @@ export class ApiStack extends cdk.Stack {
       actions: ['execute-api:ManageConnections'],
       resources: [managementArn],
     });
+    restFn.addToRolePolicy(wsManagementPolicy);
     wsConnect.addToRolePolicy(wsManagementPolicy);
     wsDisconnect.addToRolePolicy(wsManagementPolicy);
     wsMessage.addToRolePolicy(wsManagementPolicy);
 
     // WS_ENDPOINT を Lambda 環境変数に追加（CloudFormation トークン）
     const wsEndpoint = wsStage.callbackUrl;
+    restFn.addEnvironment('WS_ENDPOINT', wsEndpoint);
     wsConnect.addEnvironment('WS_ENDPOINT', wsEndpoint);
     wsDisconnect.addEnvironment('WS_ENDPOINT', wsEndpoint);
     wsMessage.addEnvironment('WS_ENDPOINT', wsEndpoint);

@@ -73,6 +73,20 @@ export async function getConnectionsByBoard(
   return (res.Items ?? []) as ConnectionItem[];
 }
 
+export async function getConnectionsByUser(
+  userId: string,
+): Promise<ConnectionItem[]> {
+  const res = await ddb.send(
+    new QueryCommand({
+      TableName: T.connections,
+      IndexName: 'userId-index',
+      KeyConditionExpression: 'userId = :u',
+      ExpressionAttributeValues: { ':u': userId },
+    }),
+  );
+  return (res.Items ?? []) as ConnectionItem[];
+}
+
 // ─── Elements ────────────────────────────────────────────────────────────────
 
 export async function getElementsByBoard(
@@ -345,6 +359,12 @@ export async function upsertUser(item: UserItem): Promise<void> {
   await ddb.send(new PutCommand({ TableName: T.users, Item: item }));
 }
 
+export async function deleteUser(userId: string): Promise<void> {
+  await ddb.send(
+    new DeleteCommand({ TableName: T.users, Key: { userId } }),
+  );
+}
+
 export async function scanUsers(): Promise<UserItem[]> {
   const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
   const res = await ddb.send(new ScanCommand({ TableName: T.users, Limit: 1000 }));
@@ -434,6 +454,13 @@ export async function getMembersByGroup(
     }),
   );
   return (res.Items ?? []) as { userId: string }[];
+}
+
+export async function deleteGroupMembersByUser(userId: string): Promise<void> {
+  const groupIds = await getGroupsByUser(userId);
+  for (const groupId of groupIds) {
+    await deleteGroupMember(groupId, userId);
+  }
 }
 
 export async function getGroupsByUser(userId: string): Promise<string[]> {

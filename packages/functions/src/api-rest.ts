@@ -14,6 +14,7 @@ import {
   upsertElement,
   getUser,
   upsertUser,
+  deleteUser,
   scanUsers,
   getGroup,
   putGroup,
@@ -23,8 +24,10 @@ import {
   getMembersByGroup,
   putGroupMember,
   deleteGroupMember,
+  deleteGroupMembersByUser,
   getGroupMember,
 } from './lib/dynamo.js';
+import { disconnectUser } from './lib/apigw.js';
 
 // ─── エントリーポイント ───────────────────────────────────────────────────────
 
@@ -76,6 +79,13 @@ async function route(
   if (method === 'GET' && path === '/api/users') {
     requireAdmin(user);
     return handleListUsers();
+  }
+
+  // /api/users/:userId
+  const userMatch = path.match(/^\/api\/users\/([^/]+)$/);
+  if (userMatch && userMatch[1] !== 'me' && method === 'DELETE') {
+    requireAdmin(user);
+    return handleDeleteUser(userMatch[1]!);
   }
 
   // /api/boards
@@ -169,6 +179,43 @@ async function handleListUsers() {
     displayName: u.displayName,
     company: u.company ?? '',
   })));
+}
+
+async function handleDeleteUser(userId: string) {
+  const targetUser = await getUser(userId);
+  if (!targetUser) throw new HttpError(404, 'User not found');
+
+  // 1. WebSocket 強制切断（force_logout 送信 + 接続切断）
+  await disconnectUser(userId);
+
+  // 2. Cognito トークン無効化 + ユーザー削除
+  const isLocal = process.env['LOCAL_AUTH'] === 'true';
+  if (!isLocal) {
+    const { CognitoIdentityProviderClient, AdminUserGlobalSignOutCommand, AdminDeleteUserCommand } =
+      await import('@aws-sdk/client-cognito-identity-provider');
+    const cognitoClient = new CognitoIdentityProviderClient({});
+    const userPoolId = process.env['COGNITO_USER_POOL_ID']!;
+
+    try {
+      await cognitoClient.send(new AdminUserGlobalSignOutCommand({
+        UserPoolId: userPoolId,
+        Username: userId,
+      }));
+    } catch {
+      // ユーザーが既に無効化されている場合は無視
+    }
+
+    await cognitoClient.send(new AdminDeleteUserCommand({
+      UserPoolId: userPoolId,
+      Username: userId,
+    }));
+  }
+
+  // 3. DynamoDB クリーンアップ
+  await deleteGroupMembersByUser(userId);
+  await deleteUser(userId);
+
+  return respond(204, null);
 }
 
 async function handleListBoards(user: AuthUser) {

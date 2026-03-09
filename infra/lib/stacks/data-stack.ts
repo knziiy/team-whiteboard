@@ -35,6 +35,11 @@ export class DataStack extends cdk.Stack {
       partitionKey: { name: 'boardId', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
     });
+    this.connectionsTable.addGlobalSecondaryIndex({
+      indexName: 'userId-index',
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
 
     // wb-{env}-elements: PK=boardId, SK=elementId
     this.elementsTable = new dynamodb.Table(this, 'Elements', {

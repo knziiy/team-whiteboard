@@ -5,7 +5,7 @@ import {
   GoneException,
 } from '@aws-sdk/client-apigatewaymanagementapi';
 import type { ServerMessage } from '@whiteboard/shared';
-import { getConnectionsByBoard, deleteConnection } from './dynamo.js';
+import { getConnectionsByBoard, getConnectionsByUser, deleteConnection } from './dynamo.js';
 
 let _client: ApiGatewayManagementApiClient | null = null;
 
@@ -65,6 +65,37 @@ export async function broadcast(
       .filter((c) => c.connectionId !== excludeConnectionId)
       .map((c) => sendToConnection(c.connectionId, message)),
   );
+}
+
+/**
+ * 指定ユーザーの全 WebSocket 接続に force_logout を送信し、切断する。
+ */
+export async function disconnectUser(userId: string): Promise<void> {
+  const connections = await getConnectionsByUser(userId);
+  for (const conn of connections) {
+    // force_logout メッセージ送信（送信失敗しても切断処理は続行）
+    await sendToConnection(conn.connectionId, {
+      type: 'force_logout',
+      reason: 'User account has been deleted',
+    });
+
+    // WebSocket 接続を切断
+    if (process.env['LOCAL_WS'] === 'true') {
+      const { unregisterLocalWs } = await import('./localWs.js');
+      unregisterLocalWs(conn.connectionId);
+    } else {
+      try {
+        await getClient().send(
+          new DeleteConnectionCommand({ ConnectionId: conn.connectionId }),
+        );
+      } catch {
+        // 既に切断済みの場合は無視
+      }
+    }
+
+    // DB から接続レコードを削除
+    await deleteConnection(conn.connectionId);
+  }
 }
 
 // cursor_move 用の接続 ID キャッシュ（Lambda warm instance 内での最適化）

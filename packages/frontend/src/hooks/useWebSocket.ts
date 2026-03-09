@@ -43,6 +43,13 @@ export function useWebSocket(boardId: string, token: string | null) {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data as string) as ServerMessage;
+        if (msg.type === 'force_logout') {
+          // 再接続を停止してログアウト
+          mountedRef.current = false;
+          ws.close();
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+          return;
+        }
         handleServerMessage(msg);
       } catch {
         // ignore parse errors

@@ -12,6 +12,9 @@ async function request<T>(
   };
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
   if (!res.ok) {
+    if (res.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
     const body = await res.json().catch(() => ({}));
     throw Object.assign(new Error((body as any).error ?? res.statusText), { status: res.status });
   }
@@ -55,5 +58,7 @@ export const api = {
     list: (token: string) => request<any[]>('/users', { token }),
     upsertMe: (token: string) =>
       request<void>('/users/me', { method: 'POST', token }),
+    delete: (userId: string, token: string) =>
+      request<void>(`/users/${userId}`, { method: 'DELETE', token }),
   },
 };

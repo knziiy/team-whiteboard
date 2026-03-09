@@ -108,6 +108,11 @@ export interface ServerElementUnlocked {
   elementId: string;
 }
 
+export interface ServerForceLogout {
+  type: 'force_logout';
+  reason: string;
+}
+
 export interface ServerError {
   type: 'error';
   message: string;
@@ -128,4 +133,5 @@ export type ServerMessage =
   | ServerCursorMove
   | ServerUserJoined
   | ServerUserLeft
+  | ServerForceLogout
   | ServerError;

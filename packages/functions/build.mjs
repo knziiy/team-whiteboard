@@ -16,7 +16,7 @@ await build({
   target: 'node22',
   outdir: 'dist',
   format: 'cjs',
-  external: [],  // すべてバンドルに含める（cold start 短縮のため node_modules も同梱）
+  external: ['@aws-sdk/*'],  // Lambda ランタイムに含まれる AWS SDK は外部化
   sourcemap: false,
   logLevel: 'info',
 });
