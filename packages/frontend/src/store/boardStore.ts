@@ -61,7 +61,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   setDrawingElementId: (id) => set({ drawingElementId: id }),
 
   setElements: (elements) =>
-    set({ elements: new Map(elements.map((el) => [el.id, el])), lockedElements: new Map(), undoStack: [], redoStack: [] }),
+    set({ elements: new Map(elements.map((el) => [el.id, el])), cursors: new Map(), lockedElements: new Map(), undoStack: [], redoStack: [] }),
 
   upsertElement: (element, saveHistory = true) =>
     set((state) => {
@@ -150,6 +150,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         set({
           elements: new Map(message.elements.map((el) => [el.id, el])),
           onlineUsers: message.onlineUsers,
+          cursors: new Map(),
           lockedElements: locks,
           undoStack: [],
           redoStack: [],

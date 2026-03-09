@@ -18,7 +18,8 @@ export default function UserPresence({ currentUserId, stageScale, stagePos }: Pr
         .filter((c) => c.userId !== currentUserId)
         .map((cursor) => {
           const user = onlineUsers.find((u) => u.userId === cursor.userId);
-          const label = user?.displayName ?? cursor.userId;
+          if (!user) return null; // オンラインでないユーザーのカーソルは表示しない
+          const label = user.displayName;
           // cursor coords are in canvas space; convert to screen space
           const screenX = cursor.x * stageScale + stagePos.x;
           const screenY = cursor.y * stageScale + stagePos.y;
