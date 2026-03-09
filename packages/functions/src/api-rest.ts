@@ -80,6 +80,10 @@ async function route(
     requireAdmin(user);
     return handleListUsers();
   }
+  if (method === 'POST' && path === '/api/users') {
+    requireAdmin(user);
+    return handleCreateUser(parseBody(event.body));
+  }
 
   // /api/users/:userId
   const userMatch = path.match(/^\/api\/users\/([^/]+)$/);
@@ -216,6 +220,66 @@ async function handleDeleteUser(userId: string) {
   await deleteUser(userId);
 
   return respond(204, null);
+}
+
+async function handleCreateUser(body: Record<string, unknown>) {
+  const email = body['email'] as string | undefined;
+  const displayName = body['displayName'] as string | undefined;
+  const temporaryPassword = body['temporaryPassword'] as string | undefined;
+  const company = body['company'] as string | undefined;
+  const groupIds = body['groupIds'] as string[] | undefined;
+
+  if (!email?.trim()) throw new HttpError(400, 'email is required');
+  if (!displayName?.trim()) throw new HttpError(400, 'displayName is required');
+  if (!temporaryPassword) throw new HttpError(400, 'temporaryPassword is required');
+
+  let userId: string;
+  const isLocal = process.env['LOCAL_AUTH'] === 'true';
+
+  if (isLocal) {
+    userId = uuidv4();
+  } else {
+    const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand } =
+      await import('@aws-sdk/client-cognito-identity-provider');
+    const cognitoClient = new CognitoIdentityProviderClient({});
+    const userPoolId = process.env['COGNITO_USER_POOL_ID']!;
+
+    const createRes = await cognitoClient.send(new AdminCreateUserCommand({
+      UserPoolId: userPoolId,
+      Username: email.trim(),
+      TemporaryPassword: temporaryPassword,
+      UserAttributes: [
+        { Name: 'email', Value: email.trim() },
+        { Name: 'email_verified', Value: 'true' },
+        { Name: 'name', Value: displayName.trim() },
+        ...(company ? [{ Name: 'custom:company', Value: company.trim() }] : []),
+      ],
+      MessageAction: 'SUPPRESS',
+    }));
+
+    userId = createRes.User!.Attributes!.find((a) => a.Name === 'sub')!.Value!;
+
+    // Admins グループへの追加は groupIds とは別（Cognito グループ）
+    // ここでは Cognito の Admins グループには追加しない（必要なら別途対応）
+  }
+
+  const now = new Date().toISOString();
+  await upsertUser({
+    userId,
+    email: email.trim(),
+    displayName: displayName.trim(),
+    isAdmin: false,
+    company: company?.trim(),
+    createdAt: now,
+  });
+
+  if (groupIds && groupIds.length > 0) {
+    for (const gid of groupIds) {
+      await putGroupMember(gid, userId);
+    }
+  }
+
+  return respond(201, { id: userId, email: email.trim(), displayName: displayName.trim(), company: company?.trim() ?? '' });
 }
 
 async function handleListBoards(user: AuthUser) {

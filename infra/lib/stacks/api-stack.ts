@@ -52,7 +52,12 @@ export class ApiStack extends cdk.Stack {
 
     // Cognito ユーザー管理権限（ユーザー削除 API 用）
     lambdaRole.addToPolicy(new iam.PolicyStatement({
-      actions: ['cognito-idp:AdminDeleteUser', 'cognito-idp:AdminUserGlobalSignOut'],
+      actions: [
+        'cognito-idp:AdminCreateUser',
+        'cognito-idp:AdminAddUserToGroup',
+        'cognito-idp:AdminDeleteUser',
+        'cognito-idp:AdminUserGlobalSignOut',
+      ],
       resources: [auth.userPool.userPoolArn],
     }));
 

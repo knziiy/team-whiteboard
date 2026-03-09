@@ -58,6 +58,8 @@ export const api = {
     list: (token: string) => request<any[]>('/users', { token }),
     upsertMe: (token: string) =>
       request<void>('/users/me', { method: 'POST', token }),
+    create: (body: { email: string; displayName: string; company?: string; temporaryPassword: string; groupIds?: string[] }, token: string) =>
+      request<any>('/users', { method: 'POST', body: JSON.stringify(body), token }),
     delete: (userId: string, token: string) =>
       request<void>(`/users/${userId}`, { method: 'DELETE', token }),
   },
