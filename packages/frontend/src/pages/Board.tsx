@@ -276,18 +276,18 @@ export default function Board({ boardId, user, onBack }: Props) {
       }
 
       if (activeTool === 'arrow') {
+        isDrawing.current = true;
+        drawingId.current = id;
         const el: BoardElement = {
           id,
           boardId,
           type: 'arrow',
-          props: { points: [pos.x, pos.y, pos.x + 100, pos.y], stroke: '#000000' } as ArrowProps,
+          props: { points: [pos.x, pos.y, pos.x, pos.y], stroke: activeColor === '#ffffff' ? '#212121' : activeColor } as ArrowProps,
           zIndex: elements.size,
           createdBy: user.id,
           updatedAt: new Date().toISOString(),
         };
         sendElement(el, 'element_add');
-        setActiveTool('select');
-        setSelectedElement(id);
         return;
       }
 
@@ -298,7 +298,7 @@ export default function Board({ boardId, user, onBack }: Props) {
           id,
           boardId,
           type: 'freehand',
-          props: { points: [pos.x, pos.y], stroke: '#000000', strokeWidth: 3 } as FreehandProps,
+          props: { points: [pos.x, pos.y], stroke: activeColor === '#ffffff' ? '#212121' : activeColor, strokeWidth: 3 } as FreehandProps,
           zIndex: elements.size,
           createdBy: user.id,
           updatedAt: new Date().toISOString(),
@@ -334,7 +334,24 @@ export default function Board({ boardId, user, onBack }: Props) {
       if (!isDrawing.current || !drawingId.current) return;
 
       const el = useBoardStore.getState().elements.get(drawingId.current);
-      if (!el || el.type !== 'freehand') return;
+      if (!el) return;
+
+      if (el.type === 'arrow') {
+        const currentPoints = (el.props as ArrowProps).points;
+        const newProps: ArrowProps = {
+          ...(el.props as ArrowProps),
+          points: [currentPoints[0], currentPoints[1], pos.x, pos.y],
+        };
+        const updated: BoardElement = { ...el, props: newProps, updatedAt: new Date().toISOString() };
+        upsertElement(updated, false);
+        if (now - lastFreehandSend.current > 50) {
+          lastFreehandSend.current = now;
+          send({ type: 'element_update', element: updated });
+        }
+        return;
+      }
+
+      if (el.type !== 'freehand') return;
 
       const newProps: FreehandProps = {
         ...(el.props as FreehandProps),
@@ -357,12 +374,18 @@ export default function Board({ boardId, user, onBack }: Props) {
     panStart.current = null;
     if (isDrawing.current && drawingId.current) {
       const el = useBoardStore.getState().elements.get(drawingId.current);
-      if (el) send({ type: 'element_update', element: el });
+      if (el) {
+        send({ type: 'element_update', element: el });
+        if (el.type === 'arrow') {
+          setActiveTool('select');
+          setSelectedElement(drawingId.current);
+        }
+      }
       setDrawingElementId(null);
     }
     isDrawing.current = false;
     drawingId.current = null;
-  }, [send, setDrawingElementId]);
+  }, [send, setDrawingElementId, setActiveTool, setSelectedElement]);
 
   const performUndo = useCallback(() => {
     const result: UndoResult | null = undo();
