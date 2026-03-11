@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './lib/konvaHitPatch'; // Brave fingerprinting保護対策（Konvaより先にロード）
 import App from './App';
 import { AuthContext, useAuthProvider } from './hooks/useAuth';
 import './index.css';
