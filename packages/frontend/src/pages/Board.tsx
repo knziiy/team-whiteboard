@@ -46,6 +46,8 @@ export default function Board({ boardId, user, onBack }: Props) {
 
   // ID of the sticky note currently being text-edited
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Ref mirror of editingId for synchronous access in event handlers (avoids stale closure)
+  const editingIdRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDrawing = useRef(false);
   const drawingId = useRef<string | null>(null);
@@ -68,13 +70,20 @@ export default function Board({ boardId, user, onBack }: Props) {
   // （WebSocket init の到着前や接続失敗時のフォールバック）
   useEffect(() => {
     let cancelled = false;
-    const { setElements } = useBoardStore.getState();
-    setElements([]); // 前のボードの残留要素をクリア
+    const state = useBoardStore.getState();
+    state.setElements([]); // 前のボードの残留要素をクリア
+    state.setActiveTool('select'); // ツールをリセット
+    state.setSelectedElement(null); // 選択をリセット
+    setEditingId(null);
+    editingIdRef.current = null;
     api.boards.get(boardId, user.idToken).then((b) => {
       if (!cancelled) setBoardTitle(b.title);
     }).catch(() => {});
     api.boards.listElements(boardId, user.idToken).then((els) => {
-      if (!cancelled) setElements(els);
+      // WebSocket init が先に到着済みなら REST レスポンスで上書きしない
+      if (!cancelled && useBoardStore.getState().elements.size === 0) {
+        useBoardStore.getState().setElements(els);
+      }
     }).catch(() => {
       // エラー時は WebSocket init に委ねる
     });
@@ -126,6 +135,9 @@ export default function Board({ boardId, user, onBack }: Props) {
     [upsertElement, send, user.id],
   );
 
+  // Keep editingIdRef in sync with editingId state
+  useEffect(() => { editingIdRef.current = editingId; }, [editingId]);
+
   // ── Sticky text editing with lock ───────────────────────────────────────────
   const pendingLockId = useRef<string | null>(null);
 
@@ -157,8 +169,11 @@ export default function Board({ boardId, user, onBack }: Props) {
   }, [lockedElements, user.id]);
 
   const commitEdit = useCallback(() => {
-    if (!editingId || !textareaRef.current) return;
-    const el = useBoardStore.getState().elements.get(editingId);
+    // editingIdRef を使い、stale closure を回避しつつ二重呼び出しを防止
+    const id = editingIdRef.current;
+    if (!id || !textareaRef.current) return;
+    editingIdRef.current = null; // 即座にクリア（二重呼び出し防止）
+    const el = useBoardStore.getState().elements.get(id);
     if (el) {
       const updated: BoardElement = {
         ...el,
@@ -168,15 +183,15 @@ export default function Board({ boardId, user, onBack }: Props) {
       sendElement(updated);
     }
     // アンロック送信
-    send({ type: 'element_unlock', elementId: editingId });
+    send({ type: 'element_unlock', elementId: id });
     setEditingId(null);
-  }, [editingId, sendElement, send]);
+  }, [sendElement, send]);
 
   // ── Stage events ─────────────────────────────────────────────────────────────
   const handleStageMouseDown = useCallback(
     (e: KonvaEventObject<MouseEvent>) => {
       // If clicking outside while editing, commit the edit
-      if (editingId) {
+      if (editingIdRef.current) {
         commitEdit();
         return;
       }
@@ -280,7 +295,7 @@ export default function Board({ boardId, user, onBack }: Props) {
         sendElement(el, 'element_add');
       }
     },
-    [activeTool, activeColor, boardId, editingId, commitEdit, elements.size,
+    [activeTool, activeColor, boardId, commitEdit, elements.size,
      sendElement, setActiveTool, setSelectedElement, startEditing, user.id, stagePos, toCanvas],
   );
 
@@ -411,7 +426,7 @@ export default function Board({ boardId, user, onBack }: Props) {
 
       // Escape: cancel editing or deselect
       if (e.key === 'Escape') {
-        if (editingId) {
+        if (editingIdRef.current) {
           commitEdit();
         } else {
           setSelectedElement(null);
@@ -421,7 +436,7 @@ export default function Board({ boardId, user, onBack }: Props) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editingId, commitEdit, removeElement, send, setSelectedElement, undo, redo, user.id]);
+  }, [commitEdit, removeElement, send, setSelectedElement, undo, redo, user.id]);
 
   const updateElement = useCallback(
     (el: BoardElement, newProps: BoardElement['props']) => {
@@ -553,7 +568,7 @@ export default function Board({ boardId, user, onBack }: Props) {
               .sort((a, b) => a.zIndex - b.zIndex)
               .map((el) => {
                 const isSelected = el.id === selectedElementId;
-                const onSelect = () => { if (!editingId) setSelectedElement(el.id); };
+                const onSelect = () => { if (!editingIdRef.current) setSelectedElement(el.id); };
 
                 if (el.type === 'sticky') {
                   const lock = lockedElements.get(el.id);
