@@ -326,7 +326,7 @@ export default function Board({ boardId, user, onBack }: Props) {
       const pos = toCanvas(rawPos.x, rawPos.y);
 
       const now = Date.now();
-      if (now - lastCursorSend.current > 250) {
+      if (showCursors && now - lastCursorSend.current > 250) {
         lastCursorSend.current = now;
         send({ type: 'cursor_move', x: pos.x, y: pos.y });
       }
@@ -366,7 +366,7 @@ export default function Board({ boardId, user, onBack }: Props) {
         send({ type: 'element_update', element: updated });
       }
     },
-    [send, upsertElement, toCanvas],
+    [send, upsertElement, toCanvas, showCursors],
   );
 
   const handleStageMouseUp = useCallback(() => {
