@@ -21,6 +21,16 @@ import FreehandLine from '../components/canvas/FreehandLine';
 import UserPresence from '../components/canvas/UserPresence';
 import type { AuthUser } from '../hooks/useAuth';
 
+function getCookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+function setCookie(name: string, value: string, days: number) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires};path=/;SameSite=Lax`;
+}
+
 interface Props {
   boardId: string;
   user: AuthUser;
@@ -65,6 +75,7 @@ export default function Board({ boardId, user, onBack }: Props) {
   const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
   const [boardTitle, setBoardTitle] = useState('');
+  const [showCursors, setShowCursors] = useState(() => getCookie('wb_show_cursors') === '1');
 
   // boardId が変わったらストアをクリアして REST API で初期要素を取得する
   // （WebSocket init の到着前や接続失敗時のフォールバック）
@@ -315,7 +326,7 @@ export default function Board({ boardId, user, onBack }: Props) {
       const pos = toCanvas(rawPos.x, rawPos.y);
 
       const now = Date.now();
-      if (now - lastCursorSend.current > 500) {
+      if (now - lastCursorSend.current > 250) {
         lastCursorSend.current = now;
         send({ type: 'cursor_move', x: pos.x, y: pos.y });
       }
@@ -532,6 +543,20 @@ export default function Board({ boardId, user, onBack }: Props) {
             className="px-2 py-1 text-gray-400 hover:text-gray-900 hover:bg-gray-50 text-sm leading-none transition"
           >+</button>
         </div>
+        <div className="w-px h-4 bg-gray-200" />
+        <button
+          onClick={() => {
+            const next = !showCursors;
+            setShowCursors(next);
+            setCookie('wb_show_cursors', next ? '1' : '0', 365);
+          }}
+          title={showCursors ? 'カーソル表示をオフ' : 'カーソル表示をオン'}
+          className={`p-1 rounded transition ${showCursors ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}
+        >
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M0 0 L0 12 L4 8 L8 16 L10 15 L6 7 L12 7 Z" />
+          </svg>
+        </button>
       </div>
 
       {/* Tool palette */}
@@ -673,7 +698,7 @@ export default function Board({ boardId, user, onBack }: Props) {
         )}
 
         {/* Cursor overlay */}
-        <UserPresence currentUserId={user.id} stageScale={stageScale} stagePos={stagePos} />
+        {showCursors && <UserPresence currentUserId={user.id} stageScale={stageScale} stagePos={stagePos} />}
       </div>
     </div>
   );
