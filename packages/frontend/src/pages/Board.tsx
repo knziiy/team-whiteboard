@@ -364,6 +364,26 @@ export default function Board({ boardId, user, onBack }: Props) {
     drawingId.current = null;
   }, [send, setDrawingElementId]);
 
+  const performUndo = useCallback(() => {
+    const result: UndoResult | null = undo();
+    if (!result) return;
+    if (result.type === 'delete') {
+      send({ type: 'element_delete', elementId: result.id });
+    } else {
+      send({ type: 'element_update', element: result.element });
+    }
+  }, [undo, send]);
+
+  const performRedo = useCallback(() => {
+    const result: UndoResult | null = redo();
+    if (!result) return;
+    if (result.type === 'delete') {
+      send({ type: 'element_delete', elementId: result.id });
+    } else {
+      send({ type: 'element_update', element: result.element });
+    }
+  }, [redo, send]);
+
   // ── Keyboard shortcuts ────────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -414,25 +434,13 @@ export default function Board({ boardId, user, onBack }: Props) {
       // Undo (Ctrl+Z / Cmd+Z)
       if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !inTextInput) {
         e.preventDefault();
-        const result: UndoResult | null = undo();
-        if (!result) return;
-        if (result.type === 'delete') {
-          send({ type: 'element_delete', elementId: result.id });
-        } else {
-          send({ type: 'element_update', element: result.element });
-        }
+        performUndo();
       }
 
       // Redo (Ctrl+Shift+Z / Cmd+Shift+Z)
       if (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey && !inTextInput) {
         e.preventDefault();
-        const result: UndoResult | null = redo();
-        if (!result) return;
-        if (result.type === 'delete') {
-          send({ type: 'element_delete', elementId: result.id });
-        } else {
-          send({ type: 'element_update', element: result.element });
-        }
+        performRedo();
       }
 
       // Escape: cancel editing or deselect
@@ -447,7 +455,7 @@ export default function Board({ boardId, user, onBack }: Props) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [commitEdit, removeElement, send, setSelectedElement, undo, redo, user.id]);
+  }, [commitEdit, removeElement, send, setSelectedElement, performUndo, performRedo, user.id]);
 
   const updateElement = useCallback(
     (el: BoardElement, newProps: BoardElement['props']) => {
@@ -516,6 +524,27 @@ export default function Board({ boardId, user, onBack }: Props) {
         </button>
         <div className="w-px h-4 bg-gray-200" />
         <span className="text-sm font-medium text-gray-900">{boardTitle || 'ボード'}</span>
+        <div className="w-px h-4 bg-gray-200" />
+        <div className="flex items-center gap-1">
+          <button
+            onClick={performUndo}
+            title="元に戻す (Ctrl+Z)"
+            className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded transition"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7v6h6" /><path d="M3 13a9 9 0 0 1 3-7.7A9 9 0 0 1 21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3" />
+            </svg>
+          </button>
+          <button
+            onClick={performRedo}
+            title="やり直し (Ctrl+Shift+Z)"
+            className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded transition"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 7v6h-6" /><path d="M21 13a9 9 0 0 0-3-7.7A9 9 0 0 0 3 12a9 9 0 0 0 9 9 9 9 0 0 0 6.7-3" />
+            </svg>
+          </button>
+        </div>
         <div className="w-px h-4 bg-gray-200" />
         <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
           <button
