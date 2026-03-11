@@ -19,6 +19,7 @@ export default function ArrowNode({ id, props, isSelected, onSelect, onChange }:
   const displayPoints = dragPoints ?? basePoints;
   const [x1, y1, x2, y2] = displayPoints;
 
+  // 端点ドラッグ（傾き変更）
   const handleDragMove = (index: 0 | 1, x: number, y: number) => {
     const newPoints = [...basePoints];
     newPoints[index * 2] = x;
@@ -34,8 +35,30 @@ export default function ArrowNode({ id, props, isSelected, onSelect, onChange }:
     onChange({ ...props, points: newPoints });
   };
 
+  // 矢印本体ドラッグ（傾きを維持したまま移動）
+  const handleBodyDragEnd = (e: any) => {
+    const node = e.target;
+    const dx = node.x();
+    const dy = node.y();
+    node.position({ x: 0, y: 0 });
+    onChange({
+      ...props,
+      points: [
+        basePoints[0] + dx,
+        basePoints[1] + dy,
+        basePoints[2] + dx,
+        basePoints[3] + dy,
+      ],
+    });
+  };
+
   return (
-    <Group onClick={onSelect} onTap={onSelect}>
+    <Group
+      onClick={onSelect}
+      onTap={onSelect}
+      draggable={isSelected}
+      onDragEnd={handleBodyDragEnd}
+    >
       <Arrow
         points={[x1!, y1!, x2!, y2!]}
         stroke={props.stroke ?? '#374151'}
@@ -43,6 +66,7 @@ export default function ArrowNode({ id, props, isSelected, onSelect, onChange }:
         strokeWidth={props.strokeWidth ?? 2}
         pointerLength={props.pointerLength ?? 10}
         pointerWidth={props.pointerWidth ?? 10}
+        hitStrokeWidth={20}
       />
       {isSelected && (
         <>
