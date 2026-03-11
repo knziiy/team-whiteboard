@@ -634,6 +634,7 @@ export default function Board({ boardId, user, onBack }: Props) {
           y={stagePos.y}
           scaleX={stageScale}
           scaleY={stageScale}
+          pixelRatio={window.devicePixelRatio * stageScale}
           onMouseDown={handleStageMouseDown}
           onMouseMove={handleStageMouseMove}
           onMouseUp={handleStageMouseUp}
