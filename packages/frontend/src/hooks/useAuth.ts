@@ -98,21 +98,48 @@ export function useAuthProvider(): AuthContextValue {
     if (LOCAL_MODE || !user) return;
 
     const SESSION_REFRESH_INTERVAL = 5 * 60 * 1000; // 5分
+    const MAX_CONSECUTIVE_FAILURES = 3; // 3回連続失敗（15分相当）でログアウト
+    let consecutiveFailures = 0;
+
+    const signOutAndClear = async () => {
+      try {
+        const pool = await createPool();
+        pool.getCurrentUser()?.signOut();
+      } catch { /* ignore */ }
+      setUser(null);
+    };
 
     const refreshSession = async () => {
       try {
         const pool = await createPool();
         const cognitoUser = pool.getCurrentUser();
-        if (!cognitoUser) { setUser(null); return; }
+        if (!cognitoUser) { await signOutAndClear(); return; }
         cognitoUser.getSession((err: Error | null, session: any) => {
-          if (err || !session?.isValid()) {
-            setUser(null);
+          if (err) {
+            if (isAuthError(err)) {
+              signOutAndClear();
+            } else {
+              consecutiveFailures++;
+              if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                signOutAndClear();
+              }
+            }
+          } else if (!session?.isValid()) {
+            signOutAndClear();
           } else {
+            consecutiveFailures = 0;
             setUser(parseCognitoSession(session));
           }
         });
-      } catch {
-        setUser(null);
+      } catch (err) {
+        if (isAuthError(err)) {
+          await signOutAndClear();
+        } else {
+          consecutiveFailures++;
+          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            await signOutAndClear();
+          }
+        }
       }
     };
 
@@ -241,6 +268,20 @@ export function useAuthProvider(): AuthContextValue {
     completeNewPassword,
     newPasswordRequired,
   };
+}
+
+function isAuthError(err: any): boolean {
+  const AUTH_ERROR_CODES = [
+    'NotAuthorizedException',
+    'UserNotFoundException',
+    'UserNotConfirmedException',
+    'InvalidParameterException',
+  ];
+  if (err?.code && AUTH_ERROR_CODES.includes(err.code)) return true;
+  // ローカルストレージからトークンが消えている等のローカルエラー
+  if (!err?.code && typeof err?.message === 'string' &&
+      err.message.toLowerCase().includes('authenticate')) return true;
+  return false;
 }
 
 function parseCognitoSession(session: any): AuthUser {

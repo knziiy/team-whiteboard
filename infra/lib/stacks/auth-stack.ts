@@ -53,8 +53,8 @@ export class AuthStack extends cdk.Stack {
         userPassword: true,
       },
       generateSecret: false,
-      idTokenValidity: cdk.Duration.hours(8),
-      accessTokenValidity: cdk.Duration.hours(8),
+      idTokenValidity: cdk.Duration.minutes(15),
+      accessTokenValidity: cdk.Duration.minutes(15),
       refreshTokenValidity: cdk.Duration.days(7),
       enableTokenRevocation: true,
     });
