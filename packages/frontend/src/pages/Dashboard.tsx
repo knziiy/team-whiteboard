@@ -211,7 +211,7 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
                             <h3 className="font-medium text-gray-900 text-sm">{board.title}</h3>
                           </button>
                         )}
-                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
+                        <div className="absolute top-3 right-3" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
                           <button
                             onClick={() => setMenuOpenBoardId(menuOpenBoardId === board.id ? null : board.id)}
                             className="p-1 rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition"
