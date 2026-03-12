@@ -165,117 +165,128 @@ export default function Dashboard({ user, onSelectBoard, onAdmin, onLogout }: Pr
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {boards.map((board) => (
-              <div
-                key={board.id}
-                className="group relative rounded-xl border border-gray-300 bg-white hover:border-gray-400 transition-all"
-              >
-                {editingBoardId === board.id ? (
-                  <div className="w-full text-left p-5">
-                    <input
-                      type="text"
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onBlur={() => renameBoard(board.id)}
-                      onKeyDown={(e) => {
-                        if (e.nativeEvent.isComposing) return;
-                        if (e.key === 'Enter') renameBoard(board.id);
-                        if (e.key === 'Escape') setEditingBoardId(null);
-                      }}
-                      autoFocus
-                      className="w-full font-medium text-gray-900 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    />
-                    <p className="text-xs text-gray-400 mt-2">
-                      {board.groupId
-                        ? (groups.find((g) => g.id === board.groupId)?.name ?? 'グループ')
-                        : 'グループなし'}
-                    </p>
+          <div className="space-y-10">
+            {[
+              ...groups.map((g) => ({ id: g.id, name: g.name })),
+              { id: null, name: 'グループなし' },
+            ].map(({ id: gid, name: gname }) => {
+              const groupBoards = boards.filter((b) =>
+                gid === null ? !b.groupId : b.groupId === gid,
+              );
+              return (
+                <section key={gid ?? '__none__'}>
+                  <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                    {gname}
+                  </h2>
+                  {groupBoards.length === 0 ? (
+                    <p className="text-sm text-gray-300">ボードなし</p>
+                  ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {groupBoards.map((board) => (
+                      <div
+                        key={board.id}
+                        className="group relative rounded-xl border border-gray-300 bg-white hover:border-gray-400 transition-all"
+                      >
+                        {editingBoardId === board.id ? (
+                          <div className="w-full text-left p-5">
+                            <input
+                              type="text"
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              onBlur={() => renameBoard(board.id)}
+                              onKeyDown={(e) => {
+                                if (e.nativeEvent.isComposing) return;
+                                if (e.key === 'Enter') renameBoard(board.id);
+                                if (e.key === 'Escape') setEditingBoardId(null);
+                              }}
+                              autoFocus
+                              className="w-full font-medium text-gray-900 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => onSelectBoard(board.id)}
+                            className="w-full text-left p-5"
+                          >
+                            <h3 className="font-medium text-gray-900 text-sm">{board.title}</h3>
+                          </button>
+                        )}
+                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
+                          <button
+                            onClick={() => setMenuOpenBoardId(menuOpenBoardId === board.id ? null : board.id)}
+                            className="p-1 rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                              <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM8.5 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM15.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
+                            </svg>
+                          </button>
+                          {menuOpenBoardId === board.id && (
+                            <div className="absolute right-0 top-8 z-10 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
+                              <button
+                                onClick={() => { setEditingBoardId(board.id); setEditingTitle(board.title); setMenuOpenBoardId(null); }}
+                                className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
+                              >
+                                名前変更
+                              </button>
+                              {(user.isAdmin || board.createdBy === user.id) && groups.length > 0 && (
+                                <button
+                                  onClick={() => { setChangingGroupBoardId(board.id); setMenuOpenBoardId(null); }}
+                                  className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
+                                >
+                                  グループ変更
+                                </button>
+                              )}
+                              <button
+                                onClick={() => { duplicateBoard(board.id); setMenuOpenBoardId(null); }}
+                                className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
+                              >
+                                複製
+                              </button>
+                              {user.isAdmin && (
+                                <button
+                                  onClick={() => { setInfoBoardId(board.id); setMenuOpenBoardId(null); }}
+                                  className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
+                                >
+                                  情報
+                                </button>
+                              )}
+                              {(user.isAdmin || board.createdBy === user.id) && (
+                                <button
+                                  onClick={() => { deleteBoard(board.id); setMenuOpenBoardId(null); }}
+                                  className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-gray-50 transition"
+                                >
+                                  削除
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {changingGroupBoardId === board.id && (
+                          <div className="px-5 pb-4">
+                            <select
+                              value={board.groupId ?? ''}
+                              onChange={(e) => {
+                                changeBoardGroup(board.id, e.target.value);
+                                setChangingGroupBoardId(null);
+                              }}
+                              onBlur={() => setChangingGroupBoardId(null)}
+                              autoFocus
+                              className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
+                            >
+                              <option value="">グループなし</option>
+                              {groups.map((g) => (
+                                <option key={g.id} value={g.id}>{g.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <button
-                    onClick={() => onSelectBoard(board.id)}
-                    className="w-full text-left p-5"
-                  >
-                    <h3 className="font-medium text-gray-900 text-sm">{board.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1.5">
-                      {board.groupId
-                        ? (groups.find((g) => g.id === board.groupId)?.name ?? 'グループ')
-                        : 'グループなし'}
-                    </p>
-                  </button>
-                )}
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuOpenBoardId === board.id ? menuRef : undefined}>
-                  <button
-                    onClick={() => setMenuOpenBoardId(menuOpenBoardId === board.id ? null : board.id)}
-                    className="p-1 rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                      <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM8.5 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM15.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
-                    </svg>
-                  </button>
-                  {menuOpenBoardId === board.id && (
-                    <div className="absolute right-0 top-8 z-10 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
-                      <button
-                        onClick={() => { setEditingBoardId(board.id); setEditingTitle(board.title); setMenuOpenBoardId(null); }}
-                        className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
-                      >
-                        名前変更
-                      </button>
-                      {(user.isAdmin || board.createdBy === user.id) && groups.length > 0 && (
-                        <button
-                          onClick={() => { setChangingGroupBoardId(board.id); setMenuOpenBoardId(null); }}
-                          className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
-                        >
-                          グループ変更
-                        </button>
-                      )}
-                      <button
-                        onClick={() => { duplicateBoard(board.id); setMenuOpenBoardId(null); }}
-                        className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
-                      >
-                        複製
-                      </button>
-                      {user.isAdmin && (
-                        <button
-                          onClick={() => { setInfoBoardId(board.id); setMenuOpenBoardId(null); }}
-                          className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition"
-                        >
-                          情報
-                        </button>
-                      )}
-                      {(user.isAdmin || board.createdBy === user.id) && (
-                        <button
-                          onClick={() => { deleteBoard(board.id); setMenuOpenBoardId(null); }}
-                          className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-gray-50 transition"
-                        >
-                          削除
-                        </button>
-                      )}
-                    </div>
                   )}
-                </div>
-                {changingGroupBoardId === board.id && (
-                  <div className="px-5 pb-4">
-                    <select
-                      value={board.groupId ?? ''}
-                      onChange={(e) => {
-                        changeBoardGroup(board.id, e.target.value);
-                        setChangingGroupBoardId(null);
-                      }}
-                      onBlur={() => setChangingGroupBoardId(null)}
-                      autoFocus
-                      className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
-                    >
-                      <option value="">グループなし</option>
-                      {groups.map((g) => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            ))}
+                </section>
+              );
+            })}
           </div>
         )}
       </main>
