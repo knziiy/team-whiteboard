@@ -5,6 +5,7 @@ interface CursorPosition {
   userId: string;
   x: number;
   y: number;
+  updatedAt: number; // Date.now()
 }
 
 interface UndoPatch {
@@ -177,7 +178,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       case 'cursor_move':
         set((state) => {
           const next = new Map(state.cursors);
-          next.set(message.userId, { userId: message.userId, x: message.x, y: message.y });
+          next.set(message.userId, { userId: message.userId, x: message.x, y: message.y, updatedAt: Date.now() });
           return { cursors: next };
         });
         break;

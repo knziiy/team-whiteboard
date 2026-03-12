@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBoardStore } from '../../store/boardStore';
+
+const CURSOR_TIMEOUT_MS = 10_000;
 
 interface Props {
   currentUserId: string;
@@ -12,10 +14,19 @@ export default function UserPresence({ currentUserId, stageScale, stagePos }: Pr
   const cursors = useBoardStore((s) => s.cursors);
   const onlineUsers = useBoardStore((s) => s.onlineUsers);
 
+  // 古いカーソルを除去するために定期的に再レンダリング
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 1_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const now = Date.now();
+
   return (
     <>
       {Array.from(cursors.values())
-        .filter((c) => c.userId !== currentUserId)
+        .filter((c) => c.userId !== currentUserId && now - c.updatedAt < CURSOR_TIMEOUT_MS)
         .map((cursor) => {
           const user = onlineUsers.find((u) => u.userId === cursor.userId);
           if (!user) return null; // オンラインでないユーザーのカーソルは表示しない
