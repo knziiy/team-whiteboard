@@ -35,7 +35,7 @@ export class FrontendStack extends cdk.Stack {
     const restApiOrigin = new origins.HttpOrigin(api.httpApiDomain, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
       customHeaders: {
-        'X-CF-Secret': cfSecret.secretValue.toString(),
+        'X-CF-Secret': cfSecret.secretValue.unsafeUnwrap(),
       },
     });
 
@@ -45,7 +45,7 @@ export class FrontendStack extends cdk.Stack {
     const wsApiOrigin = new origins.HttpOrigin(api.wsApiDomain, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
       customHeaders: {
-        'X-CF-Secret': cfSecret.secretValue.toString(),
+        'X-CF-Secret': cfSecret.secretValue.unsafeUnwrap(),
       },
       readTimeout: cdk.Duration.seconds(60),
     });

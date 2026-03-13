@@ -66,7 +66,7 @@ export class ApiStack extends cdk.Stack {
     const commonEnv: Record<string, string> = {
       COGNITO_USER_POOL_ID: auth.userPool.userPoolId,
       COGNITO_CLIENT_ID: auth.userPoolClient.userPoolClientId,
-      CLOUDFRONT_SECRET: cfSecret.secretValue.toString(),
+      CLOUDFRONT_SECRET: cfSecret.secretValue.unsafeUnwrap(),
       TABLE_CONNECTIONS: data.connectionsTable.tableName,
       TABLE_ELEMENTS: data.elementsTable.tableName,
       TABLE_BOARDS: data.boardsTable.tableName,
