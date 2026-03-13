@@ -230,8 +230,13 @@ async function handleCreateUser(body: Record<string, unknown>) {
   const groupIds = body['groupIds'] as string[] | undefined;
 
   if (!email?.trim()) throw new HttpError(400, 'email is required');
+  if (email.length > 254) throw new HttpError(400, 'email too long');
   if (!displayName?.trim()) throw new HttpError(400, 'displayName is required');
+  if (displayName.length > 100) throw new HttpError(400, 'displayName too long');
   if (!temporaryPassword) throw new HttpError(400, 'temporaryPassword is required');
+  if (temporaryPassword.length < 8) throw new HttpError(400, 'temporaryPassword must be at least 8 characters');
+  if (temporaryPassword.length > 128) throw new HttpError(400, 'temporaryPassword too long');
+  if (company && company.length > 100) throw new HttpError(400, 'company too long');
 
   let userId: string;
   const isLocal = process.env['LOCAL_AUTH'] === 'true';
@@ -307,6 +312,7 @@ async function handleListBoards(user: AuthUser) {
 async function handleCreateBoard(user: AuthUser, body: Record<string, unknown>) {
   const title = body['title'] as string | undefined;
   if (!title?.trim()) throw new HttpError(400, 'title is required');
+  if (title.length > 200) throw new HttpError(400, 'title too long');
 
   const groupId = body['groupId'] as string | undefined;
 
@@ -347,6 +353,7 @@ async function handleUpdateBoard(user: AuthUser, boardId: string, body: Record<s
   await assertBoardAccess(user, board);
 
   const title = (body['title'] as string | undefined) ?? board.title;
+  if (title.length > 200) throw new HttpError(400, 'title too long');
 
   // groupId 変更は管理者または作成者のみ
   let groupId: string | null | undefined;
@@ -428,6 +435,7 @@ async function handleListGroups(user: AuthUser) {
 async function handleCreateGroup(user: AuthUser, body: Record<string, unknown>) {
   const name = body['name'] as string | undefined;
   if (!name?.trim()) throw new HttpError(400, 'name is required');
+  if (name.length > 100) throw new HttpError(400, 'name too long');
 
   const group = {
     groupId: uuidv4(),

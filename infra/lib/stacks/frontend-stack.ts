@@ -35,7 +35,7 @@ export class FrontendStack extends cdk.Stack {
     const restApiOrigin = new origins.HttpOrigin(api.httpApiDomain, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
       customHeaders: {
-        'X-CF-Secret': cfSecret.secretValue.unsafeUnwrap(),
+        'X-CF-Secret': cfSecret.secretValue.toString(),
       },
     });
 
@@ -45,12 +45,32 @@ export class FrontendStack extends cdk.Stack {
     const wsApiOrigin = new origins.HttpOrigin(api.wsApiDomain, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
       customHeaders: {
-        'X-CF-Secret': cfSecret.secretValue.unsafeUnwrap(),
+        'X-CF-Secret': cfSecret.secretValue.toString(),
       },
       readTimeout: cdk.Duration.seconds(60),
     });
 
     const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+    // セキュリティレスポンスヘッダーポリシー
+    const responseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, 'SecurityHeaders', {
+      securityHeadersBehavior: {
+        contentTypeOptions: { override: true },
+        frameOptions: {
+          frameOption: cloudfront.HeadersFrameOption.DENY,
+          override: true,
+        },
+        strictTransportSecurity: {
+          accessControlMaxAge: cdk.Duration.seconds(63072000),
+          includeSubdomains: true,
+          override: true,
+        },
+        referrerPolicy: {
+          referrerPolicy: cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+          override: true,
+        },
+      },
+    });
 
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
@@ -58,6 +78,7 @@ export class FrontendStack extends cdk.Stack {
         origin: s3Origin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        responseHeadersPolicy,
       },
       additionalBehaviors: {
         '/api/*': {
@@ -66,6 +87,7 @@ export class FrontendStack extends cdk.Stack {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          responseHeadersPolicy,
         },
         '/ws': {
           origin: wsApiOrigin,
