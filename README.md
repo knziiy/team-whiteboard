@@ -82,6 +82,31 @@ team-whiteboards/
 └── package.json      # npm workspaces
 ```
 
+## Make コマンド
+
+Makefile にセットアップ・ビルド・開発サーバー起動・デプロイの各コマンドを定義しています。
+
+```bash
+make help       # 使用可能なコマンド一覧を表示
+```
+
+| コマンド | 説明 |
+|---------|------|
+| `make install` | 依存パッケージをインストール |
+| `make build` | 全パッケージをビルド（shared → frontend + functions） |
+| `make build-shared` | shared パッケージのみビルド |
+| `make build-frontend` | フロントエンドをビルド |
+| `make build-functions` | Lambda 関数をビルド |
+| `make typecheck` | 全パッケージの型チェック |
+| `make dev` | ローカル開発環境を一括起動 |
+| `make dev-dynamo` | DynamoDB Local を起動（Docker, :8000） |
+| `make dev-tables` | DynamoDB Local にテーブルを作成 |
+| `make dev-backend` | バックエンド開発サーバーを起動（:8080） |
+| `make dev-frontend` | フロントエンド開発サーバーを起動（:5173） |
+| `make deploy` | CDK デプロイ（dev 環境） |
+| `make deploy-prod` | CDK デプロイ（prod 環境） |
+| `make clean` | ビルド成果物を削除 |
+
 ## ローカル開発
 
 ### 前提条件
@@ -89,11 +114,10 @@ team-whiteboards/
 - Node.js 22+
 - Docker（Rancher Desktop / Docker Desktop）
 
-### 1. 依存関係インストール
+### 1. セットアップ
 
 ```bash
-npm install
-npm run build --workspace=packages/shared
+make install
 ```
 
 ### 2. 環境変数設定
@@ -112,24 +136,24 @@ VITE_AUTH_MODE=local   # Cognito を使わずローカルトークンで認証
 ### 3. DynamoDB Local 起動（初回・Docker 再起動後）
 
 ```bash
-npm run dev:dynamo   # DynamoDB Local コンテナ起動（port 8000）
-npm run dev:tables   # テーブル作成
+make dev-dynamo   # DynamoDB Local コンテナ起動（port 8000）
+make dev-tables   # テーブル作成
 ```
 
 > `-inMemory` モードのため Docker を再起動するとデータが消えます。
-> 再起動後は `npm run dev:tables` を再実行してください。
+> 再起動後は `make dev-tables` を再実行してください。
 
 ### 4. バックエンド起動
 
 ```bash
-npm run dev:local --workspace=packages/functions
+make dev-backend
 # → http://localhost:8080 で起動
 ```
 
 ### 5. フロントエンド起動
 
 ```bash
-npm run dev:frontend
+make dev-frontend
 # → http://localhost:5173
 ```
 
@@ -149,8 +173,7 @@ npm run dev:frontend
 ### 1. ビルド
 
 ```bash
-npm run build --workspace=packages/shared
-npm run build --workspace=packages/frontend
+make build
 ```
 
 ### 2. CDK デプロイ
@@ -158,14 +181,11 @@ npm run build --workspace=packages/frontend
 `-c env=<環境名>` で環境を指定します（デフォルト: `dev`）。同一 AWS アカウントに複数環境をデプロイ可能です。
 
 ```bash
-cd infra
-npm install
-
 # dev 環境
-npx cdk deploy --all -c env=dev
+make deploy
 
 # prod 環境
-npx cdk deploy --all -c env=prod
+make deploy-prod
 ```
 
 デプロイ順序: `Whiteboard-{Env}-Auth` → `Whiteboard-{Env}-Data` → `Whiteboard-{Env}-Api` → `Whiteboard-{Env}-Frontend`
