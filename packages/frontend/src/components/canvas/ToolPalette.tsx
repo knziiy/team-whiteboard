@@ -126,7 +126,7 @@ export default function ToolPalette({ onApplyColor, onApplyStrokeColor, onApplyF
             }
           }}
           title={tool.label}
-          className={`w-10 h-10 rounded-lg text-lg flex items-center justify-center transition ${
+          className={`w-full h-10 rounded-lg text-lg flex items-center justify-center transition ${
             activeTool === tool.id
               ? 'bg-gray-900 text-white'
               : 'hover:bg-gray-100 text-gray-500'
@@ -141,12 +141,12 @@ export default function ToolPalette({ onApplyColor, onApplyStrokeColor, onApplyF
           <button
             onClick={onBringToFront}
             title="最前面に移動"
-            className="w-full text-xs text-gray-500 hover:bg-gray-100 rounded-md px-1 py-1.5 text-left transition"
+            className="w-full text-xs text-gray-500 hover:bg-gray-100 rounded-md px-1 py-1.5 text-center transition"
           >↑ 最前面</button>
           <button
             onClick={onSendToBack}
             title="最背面に移動"
-            className="w-full text-xs text-gray-500 hover:bg-gray-100 rounded-md px-1 py-1.5 text-left transition"
+            className="w-full text-xs text-gray-500 hover:bg-gray-100 rounded-md px-1 py-1.5 text-center transition"
           >↓ 最背面</button>
         </div>
       )}
