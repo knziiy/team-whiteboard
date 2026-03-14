@@ -68,13 +68,16 @@ async function route(
     return respond(200, { status: 'ok' });
   }
 
-  // 認証が必要なルート
-  const user = await auth(event.headers?.['authorization'] ?? event.headers?.['Authorization']);
+  const authHeader = event.headers?.['authorization'] ?? event.headers?.['Authorization'];
 
-  // /api/users/me
+  // /api/users/me: JWT検証のみ（新規自己登録ユーザーはDynamoDBレコード未作成のため）
   if (method === 'POST' && path === '/api/users/me') {
+    const user = await authJwtOnly(authHeader);
     return handleUpsertMe(user);
   }
+
+  // 認証が必要なルート（JWT検証 + DynamoDBで存在・有効確認）
+  const user = await auth(authHeader);
 
   // /api/users
   if (method === 'GET' && path === '/api/users') {
@@ -201,7 +204,10 @@ async function handleDeleteUser(userId: string, currentUser: AuthUser) {
   const targetUser = await getUser(userId);
   if (!targetUser) throw new HttpError(404, 'User not found');
 
-  // 1. WebSocket 強制切断（force_logout 送信 + 接続切断）
+  // 1. 即時アクセス遮断（auth() の !item || disabled チェックで次のリクエストから401）
+  await updateUserDisabled(userId, true);
+
+  // 2. WebSocket 強制切断（force_logout 送信 + 接続切断）
   await disconnectUser(userId);
 
   // 2. Cognito トークン無効化 + ユーザー削除
@@ -531,15 +537,18 @@ async function handleRemoveMember(groupId: string, userId: string) {
 
 // ─── ヘルパー ─────────────────────────────────────────────────────────────────
 
-async function auth(authHeader: string | undefined): Promise<AuthUser> {
-  let user: AuthUser;
+async function authJwtOnly(authHeader: string | undefined): Promise<AuthUser> {
   try {
-    user = await verifyAuthHeader(authHeader);
+    return await verifyAuthHeader(authHeader);
   } catch {
     throw new HttpError(401, 'Unauthorized');
   }
+}
+
+async function auth(authHeader: string | undefined): Promise<AuthUser> {
+  const user = await authJwtOnly(authHeader);
   const item = await getUser(user.id);
-  if (item?.disabled) throw new HttpError(401, 'Account disabled');
+  if (!item || item.disabled) throw new HttpError(401, 'Unauthorized');
   return user;
 }
 
