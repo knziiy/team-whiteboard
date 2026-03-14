@@ -532,11 +532,15 @@ async function handleRemoveMember(groupId: string, userId: string) {
 // ─── ヘルパー ─────────────────────────────────────────────────────────────────
 
 async function auth(authHeader: string | undefined): Promise<AuthUser> {
+  let user: AuthUser;
   try {
-    return await verifyAuthHeader(authHeader);
+    user = await verifyAuthHeader(authHeader);
   } catch {
     throw new HttpError(401, 'Unauthorized');
   }
+  const item = await getUser(user.id);
+  if (item?.disabled) throw new HttpError(401, 'Account disabled');
+  return user;
 }
 
 function requireAdmin(user: AuthUser): void {
