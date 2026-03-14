@@ -45,12 +45,6 @@ export class AuthStack extends cdk.Stack {
       description: 'Administrator users',
     });
 
-    // Enable Email OTP MFA (required for all users)
-    // L2 doesn't expose EMAIL_OTP yet, so use L1 escape hatch
-    const cfnPool = this.userPool.node.defaultChild as cognito.CfnUserPool;
-    cfnPool.mfaConfiguration = 'ON';
-    cfnPool.enabledMfas = ['EMAIL_OTP'];
-
     this.userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
       userPool: this.userPool,
       userPoolClientName: `whiteboard-${envName}-client`,
