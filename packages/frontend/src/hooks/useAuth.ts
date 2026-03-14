@@ -51,9 +51,7 @@ interface AuthContextValue {
   register?: (email: string, password: string, displayName: string, company?: string) => Promise<void>;
   confirm?: (email: string, code: string) => Promise<void>;
   completeNewPassword?: (newPassword: string) => Promise<AuthUser>;
-  submitMfa?: (code: string) => Promise<AuthUser>;
   newPasswordRequired: boolean;
-  mfaRequired: boolean;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
@@ -62,7 +60,6 @@ export const AuthContext = createContext<AuthContextValue>({
   login: () => {},
   logout: () => {},
   newPasswordRequired: false,
-  mfaRequired: false,
 });
 
 export function useAuth(): AuthContextValue {
@@ -76,9 +73,6 @@ export function useAuthProvider(): AuthContextValue {
   const [loading, setLoading] = useState(true);
   const [newPasswordRequired, setNewPasswordRequired] = useState(false);
   const [pendingCognitoUser, setPendingCognitoUser] = useState<any>(null);
-  const [mfaRequired, setMfaRequired] = useState(false);
-  const [pendingMfaUser, setPendingMfaUser] = useState<any>(null);
-  const [mfaChallengeName, setMfaChallengeName] = useState<string>('EMAIL_OTP');
 
   useEffect(() => {
     if (LOCAL_MODE) {
@@ -207,18 +201,6 @@ export function useAuthProvider(): AuthContextValue {
             setNewPasswordRequired(true);
             reject(new Error('NEW_PASSWORD_REQUIRED'));
           },
-          mfaRequired: (challengeName: string) => {
-            setPendingMfaUser(cognitoUser);
-            setMfaChallengeName(challengeName);
-            setMfaRequired(true);
-            reject(new Error('MFA_REQUIRED'));
-          },
-          totpRequired: (challengeName: string) => {
-            setPendingMfaUser(cognitoUser);
-            setMfaChallengeName(challengeName);
-            setMfaRequired(true);
-            reject(new Error('MFA_REQUIRED'));
-          },
         },
       );
     });
@@ -242,29 +224,6 @@ export function useAuthProvider(): AuthContextValue {
       });
     });
   }, [pendingCognitoUser]);
-
-  const submitMfa = useCallback(async (code: string): Promise<AuthUser> => {
-    if (!pendingMfaUser) throw new Error('No pending MFA challenge');
-    return new Promise((resolve, reject) => {
-      pendingMfaUser.sendMFACode(
-        code,
-        {
-          onSuccess: (session: any) => {
-            const u = parseCognitoSession(session);
-            setUser(u);
-            setMfaRequired(false);
-            setPendingMfaUser(null);
-            api.users.upsertMe(u.idToken).catch(() => {});
-            resolve(u);
-          },
-          onFailure: (err: Error) => {
-            reject(err);
-          },
-        },
-        mfaChallengeName,
-      );
-    });
-  }, [pendingMfaUser, mfaChallengeName]);
 
   const cognitoRegister = useCallback(async (email: string, password: string, displayName: string, company?: string): Promise<void> => {
     const { CognitoUserAttribute } = await import('amazon-cognito-identity-js');
@@ -297,7 +256,7 @@ export function useAuthProvider(): AuthContextValue {
   }, []);
 
   if (LOCAL_MODE) {
-    return { user, loading, login: localLogin, logout: localLogout, newPasswordRequired: false, mfaRequired: false };
+    return { user, loading, login: localLogin, logout: localLogout, newPasswordRequired: false };
   }
 
   return {
@@ -307,9 +266,7 @@ export function useAuthProvider(): AuthContextValue {
     register: cognitoRegister,
     confirm: cognitoConfirm,
     completeNewPassword,
-    submitMfa,
     newPasswordRequired,
-    mfaRequired,
   };
 }
 
