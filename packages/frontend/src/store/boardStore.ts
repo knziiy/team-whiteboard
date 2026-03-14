@@ -32,6 +32,7 @@ interface BoardState {
   selectedElementId: string | null;
   activeTool: 'select' | 'sticky' | 'rect' | 'circle' | 'arrow' | 'freehand';
   activeColor: string;
+  activeStrokeColor: string;
   undoStack: UndoPatch[];
   redoStack: UndoPatch[];
 
@@ -44,6 +45,7 @@ interface BoardState {
   setSelectedElement: (id: string | null) => void;
   setActiveTool: (tool: BoardState['activeTool']) => void;
   setActiveColor: (color: string) => void;
+  setActiveStrokeColor: (color: string) => void;
   handleServerMessage: (message: ServerMessage) => void;
 }
 
@@ -56,6 +58,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   selectedElementId: null,
   activeTool: 'select',
   activeColor: '#ffffff',
+  activeStrokeColor: '#212121',
   undoStack: [],
   redoStack: [],
 
@@ -139,6 +142,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   setSelectedElement: (id) => set({ selectedElementId: id }),
   setActiveTool: (activeTool) => set({ activeTool }),
   setActiveColor: (activeColor) => set({ activeColor }),
+  setActiveStrokeColor: (activeStrokeColor) => set({ activeStrokeColor }),
 
   // Server messages NEVER touch undoStack — only local operations do
   handleServerMessage: (message) => {

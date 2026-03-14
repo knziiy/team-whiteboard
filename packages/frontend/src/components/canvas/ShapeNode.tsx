@@ -1,5 +1,5 @@
 import React from 'react';
-import { Rect, Circle, Transformer } from 'react-konva';
+import { Rect, Ellipse, Transformer } from 'react-konva';
 import { useRef, useEffect } from 'react';
 import type Konva from 'konva';
 import type { RectProps, CircleProps } from '@whiteboard/shared';
@@ -32,7 +32,7 @@ export function RectNode({ id, props, isSelected, onSelect, onChange }: RectNode
         width={props.width}
         height={props.height}
         fill={props.fill ?? '#3B82F6'}
-        stroke={props.stroke ?? '#1D4ED8'}
+        stroke={props.stroke ?? '#212121'}
         strokeWidth={props.strokeWidth ?? 2}
         draggable
         onClick={onSelect}
@@ -55,7 +55,7 @@ export function RectNode({ id, props, isSelected, onSelect, onChange }: RectNode
           });
         }}
       />
-      {isSelected && <Transformer ref={trRef} />}
+      {isSelected && <Transformer ref={trRef} keepRatio={false} />}
     </>
   );
 }
@@ -69,8 +69,11 @@ interface CircleNodeProps {
 }
 
 export function CircleNode({ id, props, isSelected, onSelect, onChange }: CircleNodeProps) {
-  const shapeRef = useRef<Konva.Circle>(null);
+  const shapeRef = useRef<Konva.Ellipse>(null);
   const trRef = useRef<Konva.Transformer>(null);
+
+  const radiusX = props.radiusX ?? props.radius ?? 50;
+  const radiusY = props.radiusY ?? props.radius ?? 50;
 
   useEffect(() => {
     if (isSelected && shapeRef.current && trRef.current) {
@@ -81,13 +84,14 @@ export function CircleNode({ id, props, isSelected, onSelect, onChange }: Circle
 
   return (
     <>
-      <Circle
+      <Ellipse
         ref={shapeRef}
         x={props.x}
         y={props.y}
-        radius={props.radius}
+        radiusX={radiusX}
+        radiusY={radiusY}
         fill={props.fill ?? '#3B82F6'}
-        stroke={props.stroke ?? '#1D4ED8'}
+        stroke={props.stroke ?? '#212121'}
         strokeWidth={props.strokeWidth ?? 2}
         draggable
         onClick={onSelect}
@@ -95,15 +99,22 @@ export function CircleNode({ id, props, isSelected, onSelect, onChange }: Circle
         onDragEnd={(e) => {
           onChange({ ...props, x: e.target.x(), y: e.target.y() });
         }}
-        onTransformEnd={(e) => {
+        onTransformEnd={() => {
           const node = shapeRef.current!;
-          const scale = node.scaleX();
+          const scaleX = node.scaleX();
+          const scaleY = node.scaleY();
           node.scaleX(1);
           node.scaleY(1);
-          onChange({ ...props, x: node.x(), y: node.y(), radius: Math.max(10, props.radius * scale) });
+          onChange({
+            ...props,
+            x: node.x(),
+            y: node.y(),
+            radiusX: Math.max(10, radiusX * scaleX),
+            radiusY: Math.max(10, radiusY * scaleY),
+          });
         }}
       />
-      {isSelected && <Transformer ref={trRef} keepRatio />}
+      {isSelected && <Transformer ref={trRef} keepRatio={false} />}
     </>
   );
 }

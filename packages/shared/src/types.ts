@@ -22,7 +22,9 @@ export interface RectProps extends BaseElementProps {
 }
 
 export interface CircleProps extends BaseElementProps {
-  radius: number;
+  radius?: number;    // 後方互換（旧データ用）
+  radiusX?: number;
+  radiusY?: number;
 }
 
 export interface ArrowProps {

@@ -87,7 +87,7 @@ export default function StickyNote({ props, isSelected, isEditing, isLockedByOth
         shadowBlur={isSelected ? 0 : 3}
         shadowColor="rgba(0,0,0,0.15)"
         cornerRadius={4}
-        stroke={isLockedByOther ? '#EF4444' : isSelected ? '#3B82F6' : '#d1d5db'}
+        stroke={isLockedByOther ? '#EF4444' : isSelected ? '#3B82F6' : (props.stroke ?? '#d1d5db')}
         strokeWidth={isLockedByOther ? 2 : isSelected ? 2 : 1}
         dash={isLockedByOther ? [6, 3] : undefined}
       />

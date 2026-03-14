@@ -41,6 +41,7 @@ export default function Board({ boardId, user, onBack }: Props) {
   const elements = useBoardStore((s) => s.elements);
   const activeTool = useBoardStore((s) => s.activeTool);
   const activeColor = useBoardStore((s) => s.activeColor);
+  const activeStrokeColor = useBoardStore((s) => s.activeStrokeColor);
   const selectedElementId = useBoardStore((s) => s.selectedElementId);
   const setSelectedElement = useBoardStore((s) => s.setSelectedElement);
   const setActiveTool = useBoardStore((s) => s.setActiveTool);
@@ -229,7 +230,7 @@ export default function Board({ boardId, user, onBack }: Props) {
           id,
           boardId,
           type: 'sticky',
-          props: { x: pos.x, y: pos.y, text: '', fill: activeColor, width: 160, height: 120 } as StickyProps,
+          props: { x: pos.x, y: pos.y, text: '', fill: activeColor, stroke: activeStrokeColor, width: 160, height: 120 } as StickyProps,
           zIndex: elements.size,
           createdBy: user.id,
           updatedAt: new Date().toISOString(),
@@ -248,7 +249,7 @@ export default function Board({ boardId, user, onBack }: Props) {
           id,
           boardId,
           type: 'rect',
-          props: { x: pos.x, y: pos.y, width: 100, height: 80, fill: activeColor } as RectProps,
+          props: { x: pos.x, y: pos.y, width: 100, height: 80, fill: activeColor, stroke: activeStrokeColor } as RectProps,
           zIndex: elements.size,
           createdBy: user.id,
           updatedAt: new Date().toISOString(),
@@ -264,7 +265,7 @@ export default function Board({ boardId, user, onBack }: Props) {
           id,
           boardId,
           type: 'circle',
-          props: { x: pos.x, y: pos.y, radius: 50, fill: activeColor } as CircleProps,
+          props: { x: pos.x, y: pos.y, radiusX: 50, radiusY: 50, fill: activeColor, stroke: activeStrokeColor } as CircleProps,
           zIndex: elements.size,
           createdBy: user.id,
           updatedAt: new Date().toISOString(),
@@ -282,7 +283,7 @@ export default function Board({ boardId, user, onBack }: Props) {
           id,
           boardId,
           type: 'arrow',
-          props: { points: [pos.x, pos.y, pos.x, pos.y], stroke: activeColor === '#ffffff' ? '#212121' : activeColor } as ArrowProps,
+          props: { points: [pos.x, pos.y, pos.x, pos.y], stroke: activeColor, fill: activeColor } as ArrowProps,
           zIndex: elements.size,
           createdBy: user.id,
           updatedAt: new Date().toISOString(),
@@ -495,7 +496,9 @@ export default function Board({ boardId, user, onBack }: Props) {
     if (!el) return;
     if (el.type === 'sticky' || el.type === 'rect' || el.type === 'circle') {
       updateElement(el, { ...el.props, fill: color } as BoardElement['props']);
-    } else if (el.type === 'arrow' || el.type === 'freehand') {
+    } else if (el.type === 'arrow') {
+      updateElement(el, { ...el.props, stroke: color, fill: color } as BoardElement['props']);
+    } else if (el.type === 'freehand') {
       updateElement(el, { ...el.props, stroke: color } as BoardElement['props']);
     }
   }, [updateElement]);
@@ -506,6 +509,16 @@ export default function Board({ boardId, user, onBack }: Props) {
     const el = els.get(selectedElementId);
     if (!el || el.type !== 'sticky') return;
     updateElement(el, { ...el.props, fontSize: size } as StickyProps);
+  }, [updateElement]);
+
+  const applyStrokeColorToSelected = useCallback((color: string) => {
+    const { selectedElementId, elements: els } = useBoardStore.getState();
+    if (!selectedElementId) return;
+    const el = els.get(selectedElementId);
+    if (!el) return;
+    if (el.type === 'sticky' || el.type === 'rect' || el.type === 'circle') {
+      updateElement(el, { ...el.props, stroke: color } as BoardElement['props']);
+    }
   }, [updateElement]);
 
   const applyTextColorToSelected = useCallback((color: string) => {
@@ -615,6 +628,7 @@ export default function Board({ boardId, user, onBack }: Props) {
       <div className="absolute top-4 right-4 z-10">
         <ToolPalette
           onApplyColor={applyColorToSelected}
+          onApplyStrokeColor={applyStrokeColorToSelected}
           onApplyFontSize={applyFontSizeToSelected}
           onApplyTextColor={applyTextColorToSelected}
           onBringToFront={bringToFront}
