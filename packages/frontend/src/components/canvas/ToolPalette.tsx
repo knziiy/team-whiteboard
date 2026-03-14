@@ -12,10 +12,10 @@ const TOOLS = [
 ] as const;
 
 const TOOL_DEFAULTS: Partial<Record<string, { fill: string; stroke: string }>> = {
-  sticky: { fill: '#ffffff', stroke: '#212121' },
-  rect:   { fill: '#ffffff', stroke: '#212121' },
-  circle: { fill: '#ffffff', stroke: '#212121' },
-  arrow:  { fill: '#212121', stroke: '#212121' },
+  sticky:   { fill: '#ffffff', stroke: '#212121' },
+  rect:     { fill: '#ffffff', stroke: '#212121' },
+  circle:   { fill: '#ffffff', stroke: '#212121' },
+  arrow:    { fill: '#212121', stroke: '#212121' },
   freehand: { fill: '#212121', stroke: '#212121' },
 };
 
@@ -35,52 +35,6 @@ interface Props {
 }
 
 type OpenPicker = 'fill' | 'stroke' | 'text' | null;
-
-function ColorRow({
-  label,
-  current,
-  isOpen,
-  onToggle,
-  onSelect,
-}: {
-  label: string;
-  current: string;
-  isOpen: boolean;
-  onToggle: () => void;
-  onSelect: (color: string) => void;
-}) {
-  return (
-    <div className="border-t border-gray-100 mt-1 pt-2">
-      <button
-        onClick={onToggle}
-        className="flex items-center gap-2 w-full px-1 py-0.5 rounded hover:bg-gray-50 transition"
-        title={`${label}色を選択`}
-      >
-        <span className="text-xs text-gray-400 w-6 flex-shrink-0">{label}</span>
-        <span
-          className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0"
-          style={{ backgroundColor: current }}
-        />
-        <span className="text-gray-300 text-xs ml-auto">{isOpen ? '▲' : '▼'}</span>
-      </button>
-      {isOpen && (
-        <div className="grid grid-cols-4 gap-1 mt-2 px-1">
-          {COLORS.map((color) => (
-            <button
-              key={color}
-              onClick={() => onSelect(color)}
-              title={color}
-              className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${
-                current === color ? 'border-gray-900 scale-110' : 'border-gray-200'
-              }`}
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function ToolPalette({ onApplyColor, onApplyStrokeColor, onApplyFontSize, onApplyTextColor, onBringToFront, onSendToBack }: Props) {
   const activeTool = useBoardStore((s) => s.activeTool);
@@ -104,7 +58,6 @@ export default function ToolPalette({ onApplyColor, onApplyStrokeColor, onApplyF
   const currentTextColor = isSticky ? ((selectedEl!.props as StickyProps).textColor ?? '#212121') : '#212121';
   const hasSelection = selectedEl != null;
 
-  // 選択中オブジェクトがある場合はそのオブジェクトの色を表示、なければ store のアクティブカラーを表示
   const selectedProps = selectedEl?.props as any;
   const displayFillColor = selectedEl ? (selectedProps?.fill ?? activeColor) : activeColor;
   const displayStrokeColor = selectedEl ? (selectedProps?.stroke ?? activeStrokeColor) : activeStrokeColor;
@@ -112,13 +65,21 @@ export default function ToolPalette({ onApplyColor, onApplyStrokeColor, onApplyF
   const toggle = (picker: OpenPicker) =>
     setOpenPicker((prev) => (prev === picker ? null : picker));
 
+  const currentForPicker = openPicker === 'fill' ? displayFillColor
+    : openPicker === 'stroke' ? displayStrokeColor
+    : currentTextColor;
+
+  const popupLabel = openPicker === 'fill' ? '色' : openPicker === 'stroke' ? '枠線' : '文字色';
+
   return (
-    <div className="flex flex-col gap-1.5 bg-white/90 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm p-2">
+    <div className="relative flex flex-col gap-1 bg-white/90 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm p-2 w-14">
+      {/* ツール */}
       {TOOLS.map((tool) => (
         <button
           key={tool.id}
           onClick={() => {
             setActiveTool(tool.id);
+            setOpenPicker(null);
             const defaults = TOOL_DEFAULTS[tool.id];
             if (defaults) {
               setActiveColor(defaults.fill);
@@ -136,88 +97,100 @@ export default function ToolPalette({ onApplyColor, onApplyStrokeColor, onApplyF
         </button>
       ))}
 
+      {/* 前面・背面 */}
       {hasSelection && (
-        <div className="border-t border-gray-100 mt-1 pt-2 flex flex-col gap-1">
+        <div className="border-t border-gray-100 pt-1.5 flex flex-col gap-0.5">
           <button
             onClick={onBringToFront}
             title="最前面に移動"
-            className="w-full text-xs text-gray-500 hover:bg-gray-100 rounded-md px-1 py-1.5 text-center transition"
-          >↑ 最前面</button>
+            className="w-full text-xs text-gray-400 hover:bg-gray-100 rounded-md py-1.5 transition"
+          >↑前面</button>
           <button
             onClick={onSendToBack}
             title="最背面に移動"
-            className="w-full text-xs text-gray-500 hover:bg-gray-100 rounded-md px-1 py-1.5 text-center transition"
-          >↓ 最背面</button>
+            className="w-full text-xs text-gray-400 hover:bg-gray-100 rounded-md py-1.5 transition"
+          >↓背面</button>
         </div>
       )}
 
-      <ColorRow
-        label="色"
-        current={displayFillColor}
-        isOpen={openPicker === 'fill'}
-        onToggle={() => toggle('fill')}
-        onSelect={(color) => {
-          setActiveColor(color);
-          onApplyColor?.(color);
-          setOpenPicker(null);
-        }}
-      />
-
-      {showStrokePicker && (
-        <ColorRow
-          label="枠線"
-          current={displayStrokeColor}
-          isOpen={openPicker === 'stroke'}
-          onToggle={() => toggle('stroke')}
-          onSelect={(color) => {
-            setActiveStrokeColor(color);
-            onApplyStrokeColor?.(color);
-            setOpenPicker(null);
-          }}
+      {/* カラースウォッチ */}
+      <div className="border-t border-gray-100 pt-2 flex flex-col items-center gap-1.5">
+        {/* 塗り */}
+        <button
+          onClick={() => toggle('fill')}
+          title="色"
+          className={`w-8 h-8 rounded-lg border-2 transition hover:scale-105 flex items-center justify-center ${
+            openPicker === 'fill' ? 'border-gray-900 ring-2 ring-gray-300' : 'border-gray-200'
+          }`}
+          style={{ backgroundColor: displayFillColor }}
         />
-      )}
-
-      {showTextPicker && (
-        <div className="border-t border-gray-100 mt-1 pt-2">
-          <p className="text-xs text-gray-400 mb-1.5 px-1">文字</p>
-          <div className="flex items-center justify-between gap-1 px-1 mb-1.5">
-            <button
-              onClick={() => onApplyFontSize?.(Math.max(8, currentFontSize - 2))}
-              className="w-6 h-6 rounded hover:bg-gray-100 text-gray-500 text-base leading-none flex items-center justify-center transition"
-            >−</button>
-            <span className="text-xs text-gray-500 w-6 text-center">{currentFontSize}</span>
-            <button
-              onClick={() => onApplyFontSize?.(Math.min(72, currentFontSize + 2))}
-              className="w-6 h-6 rounded hover:bg-gray-100 text-gray-500 text-base leading-none flex items-center justify-center transition"
-            >+</button>
-          </div>
+        {/* 枠線 */}
+        {showStrokePicker && (
           <button
-            onClick={() => toggle('text')}
-            className="flex items-center gap-2 w-full px-1 py-0.5 rounded hover:bg-gray-50 transition"
-            title="文字色を選択"
-          >
-            <span className="text-xs text-gray-400 w-6 flex-shrink-0">色</span>
-            <span
-              className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0"
-              style={{ backgroundColor: currentTextColor }}
-            />
-            <span className="text-gray-300 text-xs ml-auto">{openPicker === 'text' ? '▲' : '▼'}</span>
-          </button>
-          {openPicker === 'text' && (
-            <div className="grid grid-cols-4 gap-1 mt-2 px-1">
-              {COLORS.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => { onApplyTextColor?.(color); setOpenPicker(null); }}
-                  title={color}
-                  className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${
-                    currentTextColor === color ? 'border-gray-900 scale-110' : 'border-gray-200'
-                  }`}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
+            onClick={() => toggle('stroke')}
+            title="枠線"
+            className={`w-8 h-8 rounded-lg border-2 bg-white transition hover:scale-105 ${
+              openPicker === 'stroke' ? 'ring-2 ring-gray-300' : ''
+            }`}
+            style={{ borderColor: displayStrokeColor }}
+          />
+        )}
+        {/* 文字 */}
+        {showTextPicker && (
+          <>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => onApplyFontSize?.(Math.max(8, currentFontSize - 2))}
+                className="w-5 h-5 rounded hover:bg-gray-100 text-gray-400 text-sm leading-none flex items-center justify-center transition"
+              >−</button>
+              <span className="text-xs text-gray-400 w-5 text-center">{currentFontSize}</span>
+              <button
+                onClick={() => onApplyFontSize?.(Math.min(72, currentFontSize + 2))}
+                className="w-5 h-5 rounded hover:bg-gray-100 text-gray-400 text-sm leading-none flex items-center justify-center transition"
+              >+</button>
             </div>
-          )}
+            <button
+              onClick={() => toggle('text')}
+              title="文字色"
+              className={`w-8 h-8 rounded-lg border-2 transition hover:scale-105 flex items-center justify-center ${
+                openPicker === 'text' ? 'border-gray-900 ring-2 ring-gray-300' : 'border-gray-200'
+              }`}
+              style={{ backgroundColor: currentTextColor }}
+            >
+              <span className="text-xs font-bold mix-blend-difference text-white">A</span>
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* カラーポップアップ（左に展開） */}
+      {openPicker && (
+        <div className="absolute right-full mr-2 bottom-0 bg-white/95 backdrop-blur-sm rounded-xl border border-gray-100 shadow-lg p-3 w-36">
+          <p className="text-xs text-gray-400 mb-2">{popupLabel}</p>
+          <div className="grid grid-cols-4 gap-1.5">
+            {COLORS.map((color) => (
+              <button
+                key={color}
+                onClick={() => {
+                  if (openPicker === 'fill') {
+                    setActiveColor(color);
+                    onApplyColor?.(color);
+                  } else if (openPicker === 'stroke') {
+                    setActiveStrokeColor(color);
+                    onApplyStrokeColor?.(color);
+                  } else {
+                    onApplyTextColor?.(color);
+                  }
+                  setOpenPicker(null);
+                }}
+                title={color}
+                className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                  currentForPicker === color ? 'border-gray-900 scale-110' : 'border-gray-200'
+                }`}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
