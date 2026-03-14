@@ -33,6 +33,7 @@ export default function Admin({ user, onBack }: Props) {
 
   const loadMembers = async (group: any) => {
     setSelectedGroup(group);
+    setAddUserSearch('');
     try {
       const m = await api.groups.listMembers(group.id, user.idToken);
       setMembers(m);
@@ -120,6 +121,8 @@ export default function Admin({ user, onBack }: Props) {
   const toggleGroupId = (gid: string) => {
     setNewUserGroupIds((prev) => prev.includes(gid) ? prev.filter((id) => id !== gid) : [...prev, gid]);
   };
+
+  const [addUserSearch, setAddUserSearch] = useState('');
 
   const memberIds = new Set(members.map((m) => m.userId));
 
@@ -246,7 +249,7 @@ export default function Admin({ user, onBack }: Props) {
                               onClick={() => removeMember(m.userId)}
                               className="text-xs text-gray-300 hover:text-red-500 transition"
                             >
-                              削除
+                              グループから削除
                             </button>
                           </td>
                         </tr>
@@ -259,35 +262,52 @@ export default function Admin({ user, onBack }: Props) {
 
                 <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">ユーザーを追加</h3>
                 {users.filter((u) => !memberIds.has(u.id)).length > 0 ? (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">名前</th>
-                        <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">メール</th>
-                        <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">会社名</th>
-                        <th className="w-12"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users
-                        .filter((u) => !memberIds.has(u.id))
-                        .map((u) => (
-                          <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50 transition">
-                            <td className="py-2.5 text-gray-900">{u.displayName}</td>
-                            <td className="py-2.5 text-gray-500">{u.email}</td>
-                            <td className="py-2.5 text-gray-500">{u.company || ''}</td>
-                            <td className="py-2.5 text-right">
-                              <button
-                                onClick={() => addMember(u.id)}
-                                className="text-xs text-gray-400 hover:text-gray-900 transition"
-                              >
-                                追加
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
+                  <>
+                    <input
+                      type="text"
+                      placeholder="名前・会社名で絞り込み"
+                      value={addUserSearch}
+                      onChange={(e) => setAddUserSearch(e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition mb-3"
+                    />
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">名前</th>
+                          <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">メール</th>
+                          <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">会社名</th>
+                          <th className="w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users
+                          .filter((u) => {
+                            if (memberIds.has(u.id)) return false;
+                            if (!addUserSearch.trim()) return true;
+                            const q = addUserSearch.toLowerCase();
+                            return (
+                              (u.displayName ?? '').toLowerCase().includes(q) ||
+                              (u.company ?? '').toLowerCase().includes(q)
+                            );
+                          })
+                          .map((u) => (
+                            <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50 transition">
+                              <td className="py-2.5 text-gray-900">{u.displayName}</td>
+                              <td className="py-2.5 text-gray-500">{u.email}</td>
+                              <td className="py-2.5 text-gray-500">{u.company || ''}</td>
+                              <td className="py-2.5 text-right">
+                                <button
+                                  onClick={() => addMember(u.id)}
+                                  className="text-xs text-gray-400 hover:text-gray-900 transition"
+                                >
+                                  追加
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </>
                 ) : (
                   <p className="text-sm text-gray-400">追加可能なユーザーがいません</p>
                 )}
@@ -434,6 +454,9 @@ function UserManagementTab({ user, onError }: { user: AuthUser; onError: (msg: s
 
   return (
     <div>
+      <p className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-6">
+        管理者の設定はこちらの画面ではできません。Cognitoで設定する必要があります。
+      </p>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-100">
