@@ -65,10 +65,10 @@ function LocalLogin() {
 
 // ─── Cognito login ─────────────────────────────────────────────────────────────
 
-type Mode = 'login' | 'register' | 'confirm' | 'newPassword';
+type Mode = 'login' | 'register' | 'confirm' | 'newPassword' | 'mfa';
 
 function CognitoLogin() {
-  const { login, register, confirm, completeNewPassword, newPasswordRequired } = useAuth();
+  const { login, register, confirm, completeNewPassword, submitMfa, newPasswordRequired, mfaRequired } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -85,6 +85,11 @@ function CognitoLogin() {
   React.useEffect(() => {
     if (newPasswordRequired) setMode('newPassword');
   }, [newPasswordRequired]);
+
+  // mfaRequired が true になったら mode を切り替え
+  React.useEffect(() => {
+    if (mfaRequired) setMode('mfa');
+  }, [mfaRequired]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,13 +109,15 @@ function CognitoLogin() {
           return;
         }
         await completeNewPassword!(newPassword);
+      } else if (mode === 'mfa') {
+        await submitMfa!(code);
       } else {
         await confirm!(email, code);
         setMessage('登録完了。ログインしてください。');
         setMode('login');
       }
     } catch (err: any) {
-      if (err.message === 'NEW_PASSWORD_REQUIRED') {
+      if (err.message === 'NEW_PASSWORD_REQUIRED' || err.message === 'MFA_REQUIRED') {
         // mode は useEffect で切り替わるので何もしない
       } else {
         setError(err.message ?? 'エラーが発生しました');
@@ -179,6 +186,25 @@ function CognitoLogin() {
             </>
           )}
 
+          {mode === 'mfa' && (
+            <div>
+              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg mb-1">
+                メールアドレスに送信されたワンタイムパスワードを入力してください。
+              </p>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">ワンタイムパスワード</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                required
+                autoFocus
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                className={inputClass}
+              />
+            </div>
+          )}
+
           {mode === 'confirm' && (
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">確認コード</label>
@@ -191,7 +217,7 @@ function CognitoLogin() {
             disabled={loading}
             className="w-full bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition"
           >
-            {loading ? '処理中...' : mode === 'login' ? 'ログイン' : mode === 'register' ? '登録' : mode === 'newPassword' ? 'パスワード変更' : '確認'}
+            {loading ? '処理中...' : mode === 'login' ? 'ログイン' : mode === 'register' ? '登録' : mode === 'newPassword' ? 'パスワード変更' : mode === 'mfa' ? '確認' : '確認'}
           </button>
         </form>
 
@@ -203,7 +229,7 @@ function CognitoLogin() {
             >
               アカウント作成
             </button>
-          ) : (
+          ) : mode === 'mfa' ? null : (
             <button
               onClick={() => { setMode('login'); setError(''); setMessage(''); }}
               className="text-sm text-gray-400 hover:text-gray-900 transition"
