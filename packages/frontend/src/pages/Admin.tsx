@@ -265,7 +265,7 @@ export default function Admin({ user, onBack }: Props) {
                   <>
                     <input
                       type="text"
-                      placeholder="名前・会社名で絞り込み"
+                      placeholder="名前・会社名・メールで絞り込み"
                       value={addUserSearch}
                       onChange={(e) => setAddUserSearch(e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition mb-3"
@@ -287,7 +287,8 @@ export default function Admin({ user, onBack }: Props) {
                             const q = addUserSearch.toLowerCase();
                             return (
                               (u.displayName ?? '').toLowerCase().includes(q) ||
-                              (u.company ?? '').toLowerCase().includes(q)
+                              (u.company ?? '').toLowerCase().includes(q) ||
+                              (u.email ?? '').toLowerCase().includes(q)
                             );
                           })
                           .map((u) => (
