@@ -62,5 +62,9 @@ export const api = {
       request<any>('/users', { method: 'POST', body: JSON.stringify(body), token }),
     delete: (userId: string, token: string) =>
       request<void>(`/users/${userId}`, { method: 'DELETE', token }),
+    disable: (userId: string, token: string) =>
+      request<void>(`/users/${userId}/disable`, { method: 'POST', token }),
+    enable: (userId: string, token: string) =>
+      request<void>(`/users/${userId}/enable`, { method: 'POST', token }),
   },
 };

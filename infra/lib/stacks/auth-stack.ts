@@ -35,6 +35,8 @@ export class AuthStack extends cdk.Stack {
         requireSymbols: false,
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      mfa: cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: { sms: false, otp: true },
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 

@@ -346,6 +346,7 @@ export interface UserItem {
   isAdmin: boolean;
   company?: string;
   createdAt: string;
+  disabled?: boolean;
 }
 
 export async function getUser(userId: string): Promise<UserItem | null> {
@@ -369,6 +370,17 @@ export async function scanUsers(): Promise<UserItem[]> {
   const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
   const res = await ddb.send(new ScanCommand({ TableName: T.users, Limit: 1000 }));
   return (res.Items ?? []) as UserItem[];
+}
+
+export async function updateUserDisabled(userId: string, disabled: boolean): Promise<void> {
+  await ddb.send(
+    new UpdateCommand({
+      TableName: T.users,
+      Key: { userId },
+      UpdateExpression: 'SET disabled = :d',
+      ExpressionAttributeValues: { ':d': disabled },
+    }),
+  );
 }
 
 // ─── Groups ──────────────────────────────────────────────────────────────────

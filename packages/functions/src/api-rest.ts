@@ -26,6 +26,7 @@ import {
   deleteGroupMember,
   deleteGroupMembersByUser,
   getGroupMember,
+  updateUserDisabled,
 } from './lib/dynamo.js';
 import { disconnectUser } from './lib/apigw.js';
 
@@ -89,7 +90,15 @@ async function route(
   const userMatch = path.match(/^\/api\/users\/([^/]+)$/);
   if (userMatch && userMatch[1] !== 'me' && method === 'DELETE') {
     requireAdmin(user);
-    return handleDeleteUser(userMatch[1]!);
+    return handleDeleteUser(userMatch[1]!, user);
+  }
+
+  // /api/users/:userId/(disable|enable)
+  const userActionMatch = path.match(/^\/api\/users\/([^/]+)\/(disable|enable)$/);
+  if (userActionMatch && method === 'POST') {
+    requireAdmin(user);
+    if (userActionMatch[2] === 'disable') return handleDisableUser(userActionMatch[1]!, user);
+    return handleEnableUser(userActionMatch[1]!);
   }
 
   // /api/boards
@@ -182,10 +191,13 @@ async function handleListUsers() {
     email: u.email,
     displayName: u.displayName,
     company: u.company ?? '',
+    isAdmin: u.isAdmin,
+    disabled: u.disabled ?? false,
   })));
 }
 
-async function handleDeleteUser(userId: string) {
+async function handleDeleteUser(userId: string, currentUser: AuthUser) {
+  if (userId === currentUser.id) throw new HttpError(400, 'Cannot delete yourself');
   const targetUser = await getUser(userId);
   if (!targetUser) throw new HttpError(404, 'User not found');
 
@@ -220,6 +232,47 @@ async function handleDeleteUser(userId: string) {
   await deleteUser(userId);
 
   return respond(204, null);
+}
+
+async function handleDisableUser(userId: string, currentUser: AuthUser) {
+  if (userId === currentUser.id) throw new HttpError(400, 'Cannot disable yourself');
+  const targetUser = await getUser(userId);
+  if (!targetUser) throw new HttpError(404, 'User not found');
+
+  const isLocal = process.env['LOCAL_AUTH'] === 'true';
+  if (!isLocal) {
+    const { CognitoIdentityProviderClient, AdminUserGlobalSignOutCommand, AdminDisableUserCommand } =
+      await import('@aws-sdk/client-cognito-identity-provider');
+    const cognitoClient = new CognitoIdentityProviderClient({});
+    const userPoolId = process.env['COGNITO_USER_POOL_ID']!;
+    try {
+      await cognitoClient.send(new AdminUserGlobalSignOutCommand({ UserPoolId: userPoolId, Username: userId }));
+    } catch { /* ignore */ }
+    await cognitoClient.send(new AdminDisableUserCommand({ UserPoolId: userPoolId, Username: userId }));
+  }
+
+  await disconnectUser(userId);
+  await updateUserDisabled(userId, true);
+  return respond(200, { ok: true });
+}
+
+async function handleEnableUser(userId: string) {
+  const targetUser = await getUser(userId);
+  if (!targetUser) throw new HttpError(404, 'User not found');
+
+  const isLocal = process.env['LOCAL_AUTH'] === 'true';
+  if (!isLocal) {
+    const { CognitoIdentityProviderClient, AdminEnableUserCommand } =
+      await import('@aws-sdk/client-cognito-identity-provider');
+    const cognitoClient = new CognitoIdentityProviderClient({});
+    await cognitoClient.send(new AdminEnableUserCommand({
+      UserPoolId: process.env['COGNITO_USER_POOL_ID']!,
+      Username: userId,
+    }));
+  }
+
+  await updateUserDisabled(userId, false);
+  return respond(200, { ok: true });
 }
 
 async function handleCreateUser(body: Record<string, unknown>) {

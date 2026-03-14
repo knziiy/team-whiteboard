@@ -52,6 +52,12 @@ interface AuthContextValue {
   confirm?: (email: string, code: string) => Promise<void>;
   completeNewPassword?: (newPassword: string) => Promise<AuthUser>;
   newPasswordRequired: boolean;
+  totpRequired: boolean;
+  totpSetupRequired: boolean;
+  totpSetupData: { secret: string; qrUri: string } | null;
+  submitTotp?: (code: string) => Promise<AuthUser>;
+  setupTotp?: () => Promise<void>;
+  verifyTotpSetup?: (code: string) => Promise<AuthUser>;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
@@ -60,6 +66,9 @@ export const AuthContext = createContext<AuthContextValue>({
   login: () => {},
   logout: () => {},
   newPasswordRequired: false,
+  totpRequired: false,
+  totpSetupRequired: false,
+  totpSetupData: null,
 });
 
 export function useAuth(): AuthContextValue {
@@ -73,6 +82,9 @@ export function useAuthProvider(): AuthContextValue {
   const [loading, setLoading] = useState(true);
   const [newPasswordRequired, setNewPasswordRequired] = useState(false);
   const [pendingCognitoUser, setPendingCognitoUser] = useState<any>(null);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpSetupRequired, setTotpSetupRequired] = useState(false);
+  const [totpSetupData, setTotpSetupData] = useState<{ secret: string; qrUri: string } | null>(null);
 
   useEffect(() => {
     if (LOCAL_MODE) {
@@ -188,10 +200,25 @@ export function useAuthProvider(): AuthContextValue {
       cognitoUser.authenticateUser(
         new AuthenticationDetails({ Username: email, Password: password }),
         {
-          onSuccess: (session) => {
+          onSuccess: async (session) => {
             const u = parseCognitoSession(session);
+            // 管理者かつ TOTP 未設定の場合はセットアップを要求
+            if (u.isAdmin) {
+              const setupRequired = await new Promise<boolean>((res) => {
+                cognitoUser.getUserData((err, data) => {
+                  if (err) { res(false); return; }
+                  const mfaList = data?.UserMFASettingList ?? [];
+                  res(!mfaList.includes('SOFTWARE_TOKEN_MFA'));
+                });
+              });
+              if (setupRequired) {
+                setPendingCognitoUser(cognitoUser);
+                setTotpSetupRequired(true);
+                reject(new Error('TOTP_SETUP_REQUIRED'));
+                return;
+              }
+            }
             setUser(u);
-            // DynamoDB にユーザー情報を登録
             api.users.upsertMe(u.idToken).catch(() => {});
             resolve(u);
           },
@@ -200,6 +227,11 @@ export function useAuthProvider(): AuthContextValue {
             setPendingCognitoUser(cognitoUser);
             setNewPasswordRequired(true);
             reject(new Error('NEW_PASSWORD_REQUIRED'));
+          },
+          totpRequired: () => {
+            setPendingCognitoUser(cognitoUser);
+            setTotpRequired(true);
+            reject(new Error('TOTP_REQUIRED'));
           },
         },
       );
@@ -221,6 +253,80 @@ export function useAuthProvider(): AuthContextValue {
         onFailure: (err: Error) => {
           reject(err);
         },
+      });
+    });
+  }, [pendingCognitoUser]);
+
+  const submitTotp = useCallback(async (code: string): Promise<AuthUser> => {
+    if (!pendingCognitoUser) throw new Error('No pending TOTP challenge');
+    return new Promise((resolve, reject) => {
+      pendingCognitoUser.sendMFACode(code, {
+        onSuccess: (session: any) => {
+          const u = parseCognitoSession(session);
+          setUser(u);
+          setTotpRequired(false);
+          setPendingCognitoUser(null);
+          api.users.upsertMe(u.idToken).catch(() => {});
+          resolve(u);
+        },
+        onFailure: (err: Error) => reject(err),
+      }, 'SOFTWARE_TOKEN_MFA');
+    });
+  }, [pendingCognitoUser]);
+
+  const setupTotp = useCallback(async (): Promise<void> => {
+    if (!pendingCognitoUser) throw new Error('No pending user');
+    return new Promise((resolve, reject) => {
+      pendingCognitoUser.associateSoftwareToken({
+        associateSecretCode: (secret: string) => {
+          const config = getRuntimeConfig();
+          // QR URI を同期的に組み立てるのは難しいので非同期で処理
+          config.then((cfg) => {
+            const email = pendingCognitoUser.getUsername?.() ?? '';
+            const issuer = encodeURIComponent(`Team Whiteboards (${cfg.cognitoUserPoolId})`);
+            const account = encodeURIComponent(email);
+            const qrUri = `otpauth://totp/${issuer}:${account}?secret=${secret}&issuer=${issuer}`;
+            setTotpSetupData({ secret, qrUri });
+            resolve();
+          }).catch(reject);
+        },
+        onFailure: (err: Error) => reject(err),
+      });
+    });
+  }, [pendingCognitoUser]);
+
+  const verifyTotpSetup = useCallback(async (code: string): Promise<AuthUser> => {
+    if (!pendingCognitoUser) throw new Error('No pending user');
+    return new Promise((resolve, reject) => {
+      pendingCognitoUser.verifySoftwareToken(code, 'Authenticator', {
+        onSuccess: (session: any) => {
+          // TOTP を優先 MFA に設定
+          pendingCognitoUser.setUserMfaPreference(null, { PreferredMfa: true, Enabled: true }, (err: Error | null) => {
+            if (err) { reject(err); return; }
+            // セッションを再取得
+            pendingCognitoUser.getSession((err2: Error | null, newSession: any) => {
+              if (err2 || !newSession?.isValid()) {
+                // セッション取得失敗時は onSuccess のセッションを使用
+                const u = parseCognitoSession(session);
+                setUser(u);
+                setTotpSetupRequired(false);
+                setTotpSetupData(null);
+                setPendingCognitoUser(null);
+                api.users.upsertMe(u.idToken).catch(() => {});
+                resolve(u);
+                return;
+              }
+              const u = parseCognitoSession(newSession);
+              setUser(u);
+              setTotpSetupRequired(false);
+              setTotpSetupData(null);
+              setPendingCognitoUser(null);
+              api.users.upsertMe(u.idToken).catch(() => {});
+              resolve(u);
+            });
+          });
+        },
+        onFailure: (err: Error) => reject(err),
       });
     });
   }, [pendingCognitoUser]);
@@ -256,7 +362,10 @@ export function useAuthProvider(): AuthContextValue {
   }, []);
 
   if (LOCAL_MODE) {
-    return { user, loading, login: localLogin, logout: localLogout, newPasswordRequired: false };
+    return {
+      user, loading, login: localLogin, logout: localLogout,
+      newPasswordRequired: false, totpRequired: false, totpSetupRequired: false, totpSetupData: null,
+    };
   }
 
   return {
@@ -267,6 +376,12 @@ export function useAuthProvider(): AuthContextValue {
     confirm: cognitoConfirm,
     completeNewPassword,
     newPasswordRequired,
+    totpRequired,
+    totpSetupRequired,
+    totpSetupData,
+    submitTotp,
+    setupTotp,
+    verifyTotpSetup,
   };
 }
 

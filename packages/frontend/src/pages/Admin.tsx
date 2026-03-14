@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
 import type { AuthUser } from '../hooks/useAuth';
 
@@ -14,7 +14,7 @@ export default function Admin({ user, onBack }: Props) {
   const [members, setMembers] = useState<any[]>([]);
   const [newGroupName, setNewGroupName] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'groups' | 'users'>('groups');
+  const [activeTab, setActiveTab] = useState<'groups' | 'users' | 'userManagement'>('groups');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserName, setNewUserName] = useState('');
   const [newUserCompany, setNewUserCompany] = useState('');
@@ -159,6 +159,16 @@ export default function Admin({ user, onBack }: Props) {
           >
             ユーザー作成
           </button>
+          <button
+            onClick={() => setActiveTab('userManagement')}
+            className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
+              activeTab === 'userManagement'
+                ? 'border-gray-900 text-gray-900'
+                : 'border-transparent text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            ユーザー管理
+          </button>
         </div>
 
         {/* グループ設定タブ */}
@@ -286,6 +296,11 @@ export default function Admin({ user, onBack }: Props) {
           </div>
         )}
 
+        {/* ユーザー管理タブ */}
+        {activeTab === 'userManagement' && (
+          <UserManagementTab user={user} onError={setError} />
+        )}
+
         {/* ユーザー作成タブ */}
         {activeTab === 'users' && (
           <div className="max-w-md">
@@ -362,6 +377,125 @@ export default function Admin({ user, onBack }: Props) {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+// ─── ユーザー管理タブ ─────────────────────────────────────────────────────────
+
+function UserManagementTab({ user, onError }: { user: AuthUser; onError: (msg: string) => void }) {
+  const [managedUsers, setManagedUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    try {
+      const u = await api.users.list(user.idToken);
+      setManagedUsers(u);
+    } catch (e: any) {
+      onError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [user.idToken, onError]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const handleDisable = async (u: any) => {
+    if (!window.confirm(`「${u.displayName}」を無効化しますか？ログイン中の場合は強制ログアウトされます。`)) return;
+    try {
+      await api.users.disable(u.id, user.idToken);
+      await reload();
+    } catch (e: any) {
+      onError(e.message);
+    }
+  };
+
+  const handleEnable = async (u: any) => {
+    if (!window.confirm(`「${u.displayName}」を有効化しますか？`)) return;
+    try {
+      await api.users.enable(u.id, user.idToken);
+      await reload();
+    } catch (e: any) {
+      onError(e.message);
+    }
+  };
+
+  const handleDelete = async (u: any) => {
+    if (!window.confirm(`「${u.displayName}」を削除しますか？この操作は取り消せません。`)) return;
+    try {
+      await api.users.delete(u.id, user.idToken);
+      await reload();
+    } catch (e: any) {
+      onError(e.message);
+    }
+  };
+
+  if (loading) return <p className="text-sm text-gray-400">読み込み中...</p>;
+
+  return (
+    <div>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-100">
+            <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">名前</th>
+            <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">メール</th>
+            <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">会社名</th>
+            <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider pb-2">ステータス</th>
+            <th className="w-36"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {managedUsers.map((u) => (
+            <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50 transition">
+              <td className="py-2.5 text-gray-900">
+                {u.displayName}
+                {u.isAdmin && (
+                  <span className="ml-2 text-xs bg-gray-900 text-white px-1.5 py-0.5 rounded">管理者</span>
+                )}
+              </td>
+              <td className="py-2.5 text-gray-500">{u.email}</td>
+              <td className="py-2.5 text-gray-500">{u.company || ''}</td>
+              <td className="py-2.5">
+                {u.disabled ? (
+                  <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">無効</span>
+                ) : (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">有効</span>
+                )}
+              </td>
+              <td className="py-2.5 text-right">
+                {u.id !== user.id && (
+                  <span className="flex gap-3 justify-end">
+                    {u.disabled ? (
+                      <button
+                        onClick={() => handleEnable(u)}
+                        className="text-xs text-gray-400 hover:text-green-600 transition"
+                      >
+                        有効化
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleDisable(u)}
+                        className="text-xs text-gray-400 hover:text-orange-500 transition"
+                      >
+                        無効化
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(u)}
+                      className="text-xs text-gray-300 hover:text-red-500 transition"
+                    >
+                      削除
+                    </button>
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {managedUsers.length === 0 && (
+        <p className="text-sm text-gray-400 mt-4">ユーザーがいません</p>
+      )}
     </div>
   );
 }
