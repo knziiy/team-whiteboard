@@ -1,5 +1,7 @@
 # Team Whiteboards
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/knziiy/team-whiteboard)
+
 複数ユーザーがリアルタイムで共同編集できる簡易的なホワイトボードアプリケーションです。
 
 AWS CDKでAWS環境にサーバーレス構成でデプロイ可能です。  
