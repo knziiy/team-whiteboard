@@ -32,13 +32,12 @@ export default function StickyNote({ props, isSelected, isEditing, isLockedByOth
 
   const stopBubble = (e: KonvaEventObject<MouseEvent>) => { e.cancelBubble = true; };
 
-  // Corner handles use original w/h to avoid Konva drag position conflicts
   const handles = [
-    { id: 'br', cx: w, cy: h },
-    { id: 'bl', cx: 0, cy: h },
-    { id: 'tr', cx: w, cy: 0 },
-    { id: 'tl', cx: 0, cy: 0 },
-  ] as const;
+    { id: 'br' as const, cx: displayW, cy: displayH },
+    { id: 'bl' as const, cx: 0, cy: displayH },
+    { id: 'tr' as const, cx: displayW, cy: 0 },
+    { id: 'tl' as const, cx: 0, cy: 0 },
+  ];
 
   const computeResize = (handleId: string, dx: number, dy: number) => {
     let { x, y } = props;

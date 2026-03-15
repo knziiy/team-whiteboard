@@ -78,8 +78,8 @@ export default function ArrowNode({ id, props, isSelected, onSelect, onChange }:
             stroke="#3B82F6"
             strokeWidth={2}
             draggable
-            onDragMove={(e) => handleDragMove(0, e.target.x(), e.target.y())}
-            onDragEnd={(e) => handleDragEnd(0, e.target.x(), e.target.y())}
+            onDragMove={(e) => { e.cancelBubble = true; handleDragMove(0, e.target.x(), e.target.y()); }}
+            onDragEnd={(e) => { e.cancelBubble = true; handleDragEnd(0, e.target.x(), e.target.y()); }}
           />
           <Circle
             x={x2}
@@ -89,8 +89,8 @@ export default function ArrowNode({ id, props, isSelected, onSelect, onChange }:
             stroke="#3B82F6"
             strokeWidth={2}
             draggable
-            onDragMove={(e) => handleDragMove(1, e.target.x(), e.target.y())}
-            onDragEnd={(e) => handleDragEnd(1, e.target.x(), e.target.y())}
+            onDragMove={(e) => { e.cancelBubble = true; handleDragMove(1, e.target.x(), e.target.y()); }}
+            onDragEnd={(e) => { e.cancelBubble = true; handleDragEnd(1, e.target.x(), e.target.y()); }}
           />
         </>
       )}
