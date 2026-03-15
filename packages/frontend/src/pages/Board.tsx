@@ -279,6 +279,7 @@ export default function Board({ boardId, user, onBack }: Props) {
       if (activeTool === 'arrow') {
         isDrawing.current = true;
         drawingId.current = id;
+        setDrawingElementId(id);
         const el: BoardElement = {
           id,
           boardId,
